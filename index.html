@@ -144,7 +144,7 @@ nav button.on{color:var(--accent);font-weight:600}
         <input type="text" id="practicedPoint" maxlength="200" placeholder="The point (optional)" aria-label="Practiced point">
       </div>
       <div class="field"><label for="note">Note (what helped or distracted)</label><textarea id="note" maxlength="1000" placeholder="Optional"></textarea></div>
-      <button class="primary" id="save">Save Amritvela</button>
+      <button class="primary" id="save">Update chart</button>
       <div class="saved" id="savedMsg" aria-live="polite"></div>
     </div>
     <div class="card">
@@ -348,7 +348,7 @@ function loadForm(){
   setCheck("practiced",d.practiced);
   $("practicedPoint").value=d.practicedPoint||"";
   $("savedMsg").textContent=db.days[cur]&&(d.wake||d.minutes!=null||d.rating)?"Saved entry loaded":"";
-  $("save").textContent=db.days[cur]&&hasMorning(d)?"Update Amritvela":"Save Amritvela";
+  $("save").textContent=db.days[cur]&&hasMorning(d)?"Update chart":"Update chart";
   $("nextDay").disabled=cur>=today();
   var t=today();
   $("greeting").textContent=cur===t?"Today · "+niceDate(cur):niceDate(cur);
@@ -360,7 +360,7 @@ function saveForm(){
   putDay(cur,d);
   dirty=false;
   $("savedMsg").textContent="Saved";
-  $("save").textContent="Update Amritvela";
+  $("save").textContent="Update chart";
   refreshOthers();
 }
 function renderGrid(){
