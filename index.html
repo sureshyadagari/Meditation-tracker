@@ -99,6 +99,9 @@ nav button.on{color:var(--accent);font-weight:600}
 .counter .n{flex:1;text-align:center;font-size:1.4rem;font-weight:600;min-height:48px;display:flex;align-items:center;justify-content:center;background:var(--bg);border:1px solid var(--line);border-radius:12px}
 .checkpoint{margin:0 0 14px}
 .checkpoint:last-of-type{margin-bottom:14px}
+.yaad{margin:4px 0 14px;padding-top:10px;border-top:1px solid var(--line)}
+.yaad h2{margin-bottom:2px}
+.yaad .sub{margin:0 0 10px}
 .check{display:flex;align-items:center;gap:10px;width:100%;text-align:left;margin:0 0 8px;font-weight:500}
 .check .box{width:22px;height:22px;border:2px solid var(--line);border-radius:6px;flex:none;background:var(--bg);position:relative}
 .check.on{background:var(--accent-soft);border-color:var(--accent)}
@@ -160,6 +163,15 @@ main.ptr-snap{transition:transform .22s ease}
         <button type="button" class="check" id="practiced" aria-pressed="false"><span class="box" aria-hidden="true"></span>Practiced a point</button>
         <input type="text" id="practicedPoint" maxlength="200" placeholder="The point (optional)" aria-label="Practiced point">
       </div>
+      <div class="yaad">
+        <h2>Yaad ka chart</h2>
+        <p class="sub">Total time of remembrance</p>
+        <div class="row">
+          <div class="field" style="margin:0"><label for="yaadH">Hours</label><input type="number" id="yaadH" inputmode="numeric" min="0" max="24" placeholder="0" aria-label="Yaad hours"></div>
+          <div class="field" style="margin:0"><label for="yaadM">Minutes</label><input type="number" id="yaadM" inputmode="numeric" min="0" max="59" placeholder="0" aria-label="Yaad minutes"></div>
+        </div>
+        <div class="hint" id="yaadHint" style="margin-top:8px">0m</div>
+      </div>
       <div class="field"><label for="note">Note (what helped or distracted)</label><textarea id="note" maxlength="1000" placeholder="Optional"></textarea></div>
       <button class="primary" id="save">Update chart</button>
       <div class="saved" id="savedMsg" aria-live="polite"></div>
@@ -181,6 +193,7 @@ main.ptr-snap{transition:transform .22s ease}
     <div class="card"><h2>Wake-up time</h2><div id="cWake"></div>
       <div class="legend"><span><i style="background:var(--accent)"></i>By 4:15</span><span><i style="background:var(--warn)"></i>Later</span><span><i style="background:var(--muted);height:2px"></i>4:00 target</span></div></div>
     <div class="card"><h2>Amritvela minutes</h2><div id="cMins"></div></div>
+    <div class="card"><h2>Yaad ka chart</h2><div id="cYaad"></div></div>
     <div class="card"><h2>Rating</h2><div id="cRating"></div></div>
     <div class="card"><h2>Murli reads</h2><div id="cMurli"></div></div>
     <div class="card"><h2>Hourly pauses done (of 17)</h2><div id="cPauses"></div></div>
@@ -253,6 +266,7 @@ var KEY="meditationTracker.v1";
 var HOURS=[];for(var h=5;h<=21;h++)HOURS.push(h);
 var STREAK_LIMIT=4*60+15;
 var MURLI_MAX=20;
+var YAAD_MAX=24*60;
 var $=function(id){return document.getElementById(id)};
 
 function pad(n){return (n<10?"0":"")+n}
@@ -271,10 +285,39 @@ function shortDate(s){var d=parseYmd(s);return d.getDate()+" "+MONTHS[d.getMonth
 /* ---------- storage ---------- */
 var db;
 function blank(){return {version:1,days:{}}}
-function blankDay(){return {wake:"",minutes:null,rating:null,note:"",hourly:{},murli:0,churned:false,churnedPoint:"",practiced:false,practicedPoint:""}}
+function blankDay(){return {wake:"",minutes:null,rating:null,note:"",hourly:{},murli:0,churned:false,churnedPoint:"",practiced:false,practicedPoint:"",yaadMinutes:0}}
 function clampMurli(v){
   if(v===""||v==null||isNaN(+v))return 0;
   return Math.max(0,Math.min(MURLI_MAX,Math.round(+v)));
+}
+function clampYaad(v){
+  if(v===""||v==null||isNaN(+v))return 0;
+  return Math.max(0,Math.min(YAAD_MAX,Math.round(+v)));
+}
+function fmtYaad(m){
+  m=clampYaad(m);
+  if(!m)return"0m";
+  var h=Math.floor(m/60),r=m%60;
+  if(h&&r)return h+"h "+r+"m";
+  if(h)return h+"h";
+  return r+"m";
+}
+function readYaadMinutes(){
+  var h=$("yaadH").value.trim(),m=$("yaadM").value.trim();
+  var hh=h===""?0:Math.round(+h),mm=m===""?0:Math.round(+m);
+  if(isNaN(hh))hh=0;if(isNaN(mm))mm=0;
+  return clampYaad(hh*60+mm);
+}
+function renderYaadHint(total){
+  if(total==null)total=readYaadMinutes();
+  $("yaadHint").textContent=fmtYaad(total);
+}
+function setYaadInputs(total){
+  total=clampYaad(total);
+  var h=Math.floor(total/60),mm=total%60;
+  $("yaadH").value=total?String(h):"";
+  $("yaadM").value=total?String(mm):"";
+  renderYaadHint(total);
 }
 function load(){
   var raw=null;
@@ -304,7 +347,8 @@ function normalize(o){
       churned:!!d.churned,
       churnedPoint:typeof d.churnedPoint==="string"?d.churnedPoint:"",
       practiced:!!d.practiced,
-      practicedPoint:typeof d.practicedPoint==="string"?d.practicedPoint:""};
+      practicedPoint:typeof d.practicedPoint==="string"?d.practicedPoint:"",
+      yaadMinutes:clampYaad(d.yaadMinutes)};
   });
   return out;
 }
@@ -316,11 +360,12 @@ function getDay(s){
     wake:d.wake||"",minutes:d.minutes==null?null:d.minutes,rating:d.rating||null,
     note:d.note||"",hourly:d.hourly||{},murli:clampMurli(d.murli),
     churned:!!d.churned,churnedPoint:typeof d.churnedPoint==="string"?d.churnedPoint:"",
-    practiced:!!d.practiced,practicedPoint:typeof d.practicedPoint==="string"?d.practicedPoint:""
+    practiced:!!d.practiced,practicedPoint:typeof d.practicedPoint==="string"?d.practicedPoint:"",
+    yaadMinutes:clampYaad(d.yaadMinutes)
   };
 }
 function hasMorning(d){
-  return !!(d.wake||d.minutes!=null||d.rating||d.note||(d.murli&&d.murli>0)||d.churned||d.churnedPoint||d.practiced||d.practicedPoint);
+  return !!(d.wake||d.minutes!=null||d.rating||d.note||(d.murli&&d.murli>0)||d.churned||d.churnedPoint||d.practiced||d.practicedPoint||(d.yaadMinutes&&d.yaadMinutes>0));
 }
 function isEmptyDay(d){return !hasMorning(d)&&!Object.keys(d.hourly||{}).length}
 function putDay(s,d){if(isEmptyDay(d))delete db.days[s];else db.days[s]=d;persist()}
@@ -357,6 +402,7 @@ function readForm(d){
   d.churnedPoint=$("churnedPoint").value.trim();
   d.practiced=$("practiced").getAttribute("aria-pressed")==="true";
   d.practicedPoint=$("practicedPoint").value.trim();
+  d.yaadMinutes=readYaadMinutes();
   d.hourly=d.hourly||{};
   return d;
 }
@@ -374,7 +420,8 @@ function loadForm(){
   $("churnedPoint").value=d.churnedPoint||"";
   setCheck("practiced",d.practiced);
   $("practicedPoint").value=d.practicedPoint||"";
-  $("savedMsg").textContent=db.days[cur]&&(d.wake||d.minutes!=null||d.rating)?"Saved entry loaded":"";
+  setYaadInputs(d.yaadMinutes);
+  $("savedMsg").textContent=db.days[cur]&&(d.wake||d.minutes!=null||d.rating||(d.yaadMinutes&&d.yaadMinutes>0))?"Saved entry loaded":"";
   $("save").textContent=db.days[cur]&&hasMorning(d)?"Update chart":"Update chart";
   $("nextDay").disabled=cur>=today();
   var t=today();
@@ -385,6 +432,7 @@ function loadForm(){
 function saveForm(){
   var d=readForm(getDay(cur));
   putDay(cur,d);
+  setYaadInputs(d.yaadMinutes);
   dirty=false;
   $("savedMsg").textContent="Saved";
   $("save").textContent="Update chart";
@@ -468,10 +516,10 @@ function bestFieldStreak(field){
   return best;
 }
 function renderStats(dates){
-  var rs=[],mins=0,pm=0,early=0,logged=0,murli=0,churned=0,practiced=0;
+  var rs=[],mins=0,pm=0,early=0,logged=0,murli=0,churned=0,practiced=0,yaad=0;
   dates.forEach(function(s){var d=db.days[s];if(!d)return;logged++;
     if(d.rating)rs.push(d.rating);if(d.minutes)mins+=d.minutes;pm+=pauseMinutes(d);if(onTime(s))early++;
-    murli+=clampMurli(d.murli);if(d.churned)churned++;if(d.practiced)practiced++});
+    murli+=clampMurli(d.murli);if(d.churned)churned++;if(d.practiced)practiced++;yaad+=clampYaad(d.yaadMinutes)});
   var avg=rs.length?(rs.reduce(function(a,b){return a+b},0)/rs.length).toFixed(1):"–";
   var murliAvg=logged?(murli/logged).toFixed(1):"–";
   var cs=currentStreak(),bs=bestStreak();
@@ -484,6 +532,8 @@ function renderStats(dates){
     [fmtHM(pm),"Hourly pause time"],
     [early+" / "+logged,"Days up by 4:15"],
     [logged+"","Days logged"],
+    [fmtYaad(yaad),"Yaad total"],
+    [logged?fmtYaad(Math.round(yaad/logged)):"0m","Yaad daily average"],
     [String(murli),murliAvg==="–"?"Murli reads":"Murli reads (avg "+murliAvg+"/day)"],
     [churned+" / "+logged,"Churned · streak "+cSt+" (best "+cBest+")"],
     [practiced+" / "+logged,"Practiced · streak "+pSt+" (best "+pBest+")"]
@@ -541,6 +591,7 @@ function renderProgress(){
   renderStats(dates);
   wakeChart($("cWake"),dates);
   barChart($("cMins"),dates,function(d){return d.minutes},0,null,function(v){return Math.round(v)},null,"Amritvela minutes chart");
+  barChart($("cYaad"),dates,function(d){return clampYaad(d.yaadMinutes)},0,null,fmtYaad,null,"Yaad ka chart");
   barChart($("cRating"),dates,function(d){return d.rating},5,[0,1,2,3,4,5],function(v){return v},function(v){return v>=3?"var(--accent)":"var(--warn)"},"Rating chart");
   barChart($("cMurli"),dates,function(d){return clampMurli(d.murli)},0,[0,1,2,3,4,5],function(v){return Math.round(v)},null,"Murli reads chart");
   barChart($("cPauses"),dates,function(d){return pausesDone(d)},17,[0,4,8,12,17],function(v){return v},null,"Hourly pauses chart");
@@ -557,6 +608,7 @@ function renderHistory(){
     if(clampMurli(d.murli)>0)bits.push("Murli ×"+clampMurli(d.murli));
     if(d.churned)bits.push("Churned");
     if(d.practiced)bits.push("Practiced");
+    if(clampYaad(d.yaadMinutes)>0)bits.push("Yaad "+fmtYaad(d.yaadMinutes));
     bits.push(pausesDone(d)+"/17 pauses");
     var extra="";
     if(d.note)extra+='<div class="n">'+esc(d.note)+'</div>';
@@ -613,7 +665,7 @@ function makeIcons(){
 db=load();
 makeIcons();
 $("rating").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;var r=+b.dataset.r;curRating=curRating===r?null:r;dirty=true;renderRatingButtons();$("savedMsg").textContent=""});
-["wake","mins","note","churnedPoint","practicedPoint"].forEach(function(id){$(id).addEventListener("input",function(){dirty=true;$("savedMsg").textContent=""})});
+["wake","mins","note","churnedPoint","practicedPoint","yaadH","yaadM"].forEach(function(id){$(id).addEventListener("input",function(){dirty=true;$("savedMsg").textContent="";if(id==="yaadH"||id==="yaadM")renderYaadHint()})});
 $("murliMinus").addEventListener("click",function(){if(curMurli<=0)return;curMurli--;dirty=true;renderMurli();$("savedMsg").textContent=""});
 $("murliPlus").addEventListener("click",function(){if(curMurli>=MURLI_MAX)return;curMurli++;dirty=true;renderMurli();$("savedMsg").textContent=""});
 function toggleCheck(id){var on=$(""+id).getAttribute("aria-pressed")!=="true";setCheck(id,on);dirty=true;$("savedMsg").textContent=""}
