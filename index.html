@@ -104,9 +104,26 @@ nav button.on{color:var(--accent);font-weight:600}
 .check.on{background:var(--accent-soft);border-color:var(--accent)}
 .check.on .box{background:var(--accent);border-color:var(--accent)}
 .check.on .box::after{content:"";position:absolute;left:6px;top:2px;width:6px;height:11px;border:2px solid #f6f4ef;border-top:0;border-left:0;transform:rotate(45deg)}
+
+html,body{overscroll-behavior-y:contain}
+#ptr{position:fixed;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;justify-content:center;height:0;overflow:hidden;pointer-events:none;color:var(--muted);font-size:.85rem}
+#ptr.snap{transition:height .22s ease}
+#ptr .ptr-inner{display:flex;align-items:center;gap:8px;padding:calc(6px + env(safe-area-inset-top)) 0 8px}
+#ptr .ptr-icon{width:12px;height:12px;border-right:2px solid var(--accent);border-bottom:2px solid var(--accent);transform:rotate(45deg);transition:transform .15s;flex:none}
+#ptr.armed .ptr-icon{transform:rotate(225deg)}
+#ptr.refreshing .ptr-icon{width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;transform:none;animation:ptrSpin .7s linear infinite}
+@keyframes ptrSpin{to{transform:rotate(360deg)}}
+main.ptr-snap{transition:transform .22s ease}
 </style>
 </head>
 <body>
+
+<div id="ptr" aria-hidden="true">
+  <div class="ptr-inner">
+    <span class="ptr-icon" id="ptrIcon"></span>
+    <span class="ptr-text" id="ptrText">Pull to refresh</span>
+  </div>
+</div>
 <main>
   <section class="view on" id="v-today">
     <h1>Meditation Tracker</h1>
@@ -222,6 +239,16 @@ nav button.on{color:var(--accent);font-weight:600}
 <script>
 (function(){
 "use strict";
+
+try{
+  var _ru=new URL(location.href);
+  if(_ru.searchParams.has("_r")){
+    _ru.searchParams.delete("_r");
+    var _rq=_ru.searchParams.toString();
+    history.replaceState(null,"",_ru.pathname+(_rq?"?"+_rq:"")+_ru.hash);
+  }
+}catch(e){}
+
 var KEY="meditationTracker.v1";
 var HOURS=[];for(var h=5;h<=21;h++)HOURS.push(h);
 var STREAK_LIMIT=4*60+15;
@@ -615,6 +642,95 @@ $("importFile").addEventListener("change",function(){var f=this.files&&this.file
 window.addEventListener("storage",function(e){if(e.key===KEY){db=load();loadForm();refreshOthers()}});
 document.addEventListener("visibilitychange",function(){if(!document.hidden)renderGrid()});
 setInterval(renderGrid,60000);
+
+/* ---------- pull to refresh ---------- */
+(function setupPullToRefresh(){
+  var THRESHOLD=70, MAX_PULL=112, REST=56, SLOP=10;
+  var ptr=$("ptr"), ptrText=$("ptrText"), mainEl=document.querySelector("main");
+  if(!ptr||!mainEl)return;
+  var tracking=false, pulling=false, armed=false, refreshing=false;
+  var startX=0, startY=0;
+
+  function yScroll(){return window.scrollY||document.documentElement.scrollTop||document.body.scrollTop||0}
+  function ignoreEl(el){
+    if(!el||!el.closest)return false;
+    return !!el.closest("input,textarea,select,nav,.sheet-bg");
+  }
+  function applyPull(px, snap){
+    ptr.classList.toggle("snap", !!snap);
+    mainEl.classList.toggle("ptr-snap", !!snap);
+    ptr.style.height=(px||0)+"px";
+    mainEl.style.transform=px?"translateY("+px+"px)":"";
+  }
+  function setArmed(on){
+    armed=on;
+    ptr.classList.toggle("armed", on && !refreshing);
+    if(!refreshing) ptrText.textContent=on?"Release to refresh":"Pull to refresh";
+  }
+  function resetPtr(){
+    setArmed(false);
+    ptr.classList.remove("refreshing");
+    ptrText.textContent="Pull to refresh";
+    applyPull(0, true);
+  }
+  function doReload(){
+    try{
+      var u=new URL(location.href);
+      u.searchParams.set("_r", String(Date.now()));
+      location.replace(u.href);
+    }catch(e){location.reload()}
+  }
+  function startRefresh(){
+    refreshing=true;
+    ptr.classList.add("refreshing");
+    ptr.classList.remove("armed");
+    ptrText.textContent="Refreshing…";
+    applyPull(REST, true);
+    setTimeout(doReload, 180);
+  }
+
+  document.addEventListener("touchstart", function(e){
+    if(refreshing||e.touches.length!==1){tracking=false;return}
+    if(ignoreEl(e.target)||yScroll()>0){tracking=false;return}
+    startX=e.touches[0].clientX; startY=e.touches[0].clientY;
+    tracking=true; pulling=false; setArmed(false);
+    ptr.classList.remove("snap"); mainEl.classList.remove("ptr-snap");
+  }, {passive:true});
+
+  document.addEventListener("touchmove", function(e){
+    if(!tracking||refreshing)return;
+    var t=e.touches[0], dy=t.clientY-startY, dx=t.clientX-startX;
+    if(!pulling){
+      if(Math.abs(dx)>Math.abs(dy) && Math.abs(dx)>SLOP){tracking=false;return}
+      if(dy<SLOP)return;
+      if(yScroll()>0){tracking=false;return}
+      pulling=true;
+    }
+    if(dy<=0){
+      applyPull(0,false); setArmed(false);
+      return;
+    }
+    if(e.cancelable)e.preventDefault();
+    var visual=Math.min(MAX_PULL, dy*0.55);
+    applyPull(visual, false);
+    setArmed(dy>=THRESHOLD);
+  }, {passive:false});
+
+  document.addEventListener("touchend", function(){
+    if(!tracking)return;
+    tracking=false;
+    var should=pulling&&armed&&!refreshing;
+    pulling=false;
+    if(should)startRefresh();
+    else resetPtr();
+  }, {passive:true});
+
+  document.addEventListener("touchcancel", function(){
+    tracking=false; pulling=false;
+    if(!refreshing)resetPtr();
+  }, {passive:true});
+})();
+
 loadForm();refreshOthers();
 window.__mt={doImport:doImport,db:function(){return db},KEY:KEY};
 })();
