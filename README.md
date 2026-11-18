@@ -1,6 +1,6 @@
 # Meditation Tracker
 
-A single-file offline web app for a morning meditation log (wake-up time, minutes, a 1–5 rating, and a note) and hourly pauses from 5 AM to 9 PM. Progress shows a wake-by-4:15 streak and simple charts. Everything runs in the browser: inline CSS and JavaScript, no network calls.
+A single-file offline web app for an Amritvela log (wake-up time, minutes, a 1–5 rating, a Murli read counter, and a note), checkpoints for a point you churned and a point you practiced, and hourly pauses from 5 AM to 9 PM. Progress shows a wake-by-4:15 streak and simple charts. Everything runs in the browser: inline CSS and JavaScript, no network calls.
 
 Open it at [https://sureshyadagari.github.io/Meditation-tracker/](https://sureshyadagari.github.io/Meditation-tracker/). On a phone, use the browser’s Add to Home Screen so it opens full screen.
 

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Meditation Tracker</title>
-<meta name="description" content="Track morning meditation, 4 AM wake-ups and hourly pauses. Works offline.">
+<meta name="description" content="Track Amritvela meditation, Murli reads, 4 AM wake-ups and hourly pauses. Works offline.">
 <meta name="theme-color" content="#f6f4ef" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#16181c" media="(prefers-color-scheme: dark)">
 <meta name="color-scheme" content="light dark">
@@ -45,6 +45,7 @@ button{font:inherit;cursor:pointer;border-radius:12px;border:1px solid var(--lin
 button.primary{background:var(--accent);border-color:var(--accent);color:var(--card);font-weight:600;width:100%}
 button.ghost{background:transparent}
 button:active{transform:scale(.98)}
+button:disabled{opacity:.4;cursor:default;transform:none}
 .datebar{display:flex;gap:8px;align-items:center;margin:0 0 14px}
 .datebar input{flex:1;text-align:center}
 .datebar button{width:48px;padding:0;flex:none}
@@ -93,31 +94,57 @@ nav button.on{color:var(--accent);font-weight:600}
 .sheet .chips{margin:0 0 12px}
 .legend{display:flex;gap:14px;font-size:.78rem;color:var(--muted);margin-top:6px}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.counter{display:flex;align-items:center;gap:10px}
+.counter button{width:48px;flex:none;padding:0;font-size:1.4rem;line-height:1}
+.counter .n{flex:1;text-align:center;font-size:1.4rem;font-weight:600;min-height:48px;display:flex;align-items:center;justify-content:center;background:var(--bg);border:1px solid var(--line);border-radius:12px}
+.checkpoint{margin:0 0 14px}
+.checkpoint:last-of-type{margin-bottom:14px}
+.check{display:flex;align-items:center;gap:10px;width:100%;text-align:left;margin:0 0 8px;font-weight:500}
+.check .box{width:22px;height:22px;border:2px solid var(--line);border-radius:6px;flex:none;background:var(--bg);position:relative}
+.check.on{background:var(--accent-soft);border-color:var(--accent)}
+.check.on .box{background:var(--accent);border-color:var(--accent)}
+.check.on .box::after{content:"";position:absolute;left:6px;top:2px;width:6px;height:11px;border:2px solid #f6f4ef;border-top:0;border-left:0;transform:rotate(45deg)}
 </style>
 </head>
 <body>
 <main>
   <section class="view on" id="v-today">
     <h1>Meditation Tracker</h1>
-    <p class="sub" id="greeting">Morning practice and hourly pauses</p>
+    <p class="sub" id="greeting">Amritvela, Murli and hourly pauses</p>
     <div class="datebar">
       <button class="ghost" id="prevDay" aria-label="Previous day">&#8249;</button>
       <input type="date" id="date" aria-label="Date">
       <button class="ghost" id="nextDay" aria-label="Next day">&#8250;</button>
     </div>
     <div class="card">
-      <h2>Morning log</h2>
+      <h2>Amritvela</h2>
       <div class="row">
         <div class="field"><label for="wake">Woke up at (target 4:00)</label><input type="time" id="wake"></div>
-        <div class="field"><label for="mins">Meditation minutes</label><input type="number" id="mins" inputmode="numeric" min="0" max="600" placeholder="0"></div>
+        <div class="field"><label for="mins">Amritvela minutes</label><input type="number" id="mins" inputmode="numeric" min="0" max="600" placeholder="0"></div>
       </div>
       <div class="field">
         <label>How effective did it feel?</label>
         <div class="rating" id="rating" role="radiogroup" aria-label="Rating 1 to 5"></div>
         <div class="hint" id="ratingHint" style="margin-top:6px">1 = scattered, 5 = deep and still</div>
       </div>
+      <div class="field">
+        <label id="murliLabel">Murli (complete reads)</label>
+        <div class="counter" role="group" aria-labelledby="murliLabel">
+          <button type="button" id="murliMinus" aria-label="Fewer Murli reads">−</button>
+          <div class="n" id="murliVal" aria-live="polite">0</div>
+          <button type="button" id="murliPlus" aria-label="More Murli reads">+</button>
+        </div>
+      </div>
+      <div class="checkpoint">
+        <button type="button" class="check" id="churned" aria-pressed="false"><span class="box" aria-hidden="true"></span>Churned a point</button>
+        <input type="text" id="churnedPoint" maxlength="200" placeholder="The point (optional)" aria-label="Churned point">
+      </div>
+      <div class="checkpoint">
+        <button type="button" class="check" id="practiced" aria-pressed="false"><span class="box" aria-hidden="true"></span>Practiced a point</button>
+        <input type="text" id="practicedPoint" maxlength="200" placeholder="The point (optional)" aria-label="Practiced point">
+      </div>
       <div class="field"><label for="note">Note (what helped or distracted)</label><textarea id="note" maxlength="1000" placeholder="Optional"></textarea></div>
-      <button class="primary" id="save">Save morning log</button>
+      <button class="primary" id="save">Save Amritvela</button>
       <div class="saved" id="savedMsg" aria-live="polite"></div>
     </div>
     <div class="card">
@@ -136,8 +163,9 @@ nav button.on{color:var(--accent);font-weight:600}
     <div class="stats" id="stats"></div>
     <div class="card"><h2>Wake-up time</h2><div id="cWake"></div>
       <div class="legend"><span><i style="background:var(--accent)"></i>By 4:15</span><span><i style="background:var(--warn)"></i>Later</span><span><i style="background:var(--muted);height:2px"></i>4:00 target</span></div></div>
-    <div class="card"><h2>Morning minutes</h2><div id="cMins"></div></div>
+    <div class="card"><h2>Amritvela minutes</h2><div id="cMins"></div></div>
     <div class="card"><h2>Rating</h2><div id="cRating"></div></div>
+    <div class="card"><h2>Murli reads</h2><div id="cMurli"></div></div>
     <div class="card"><h2>Hourly pauses done (of 17)</h2><div id="cPauses"></div></div>
   </section>
 
@@ -197,6 +225,7 @@ nav button.on{color:var(--accent);font-weight:600}
 var KEY="meditationTracker.v1";
 var HOURS=[];for(var h=5;h<=21;h++)HOURS.push(h);
 var STREAK_LIMIT=4*60+15;
+var MURLI_MAX=20;
 var $=function(id){return document.getElementById(id)};
 
 function pad(n){return (n<10?"0":"")+n}
@@ -215,6 +244,11 @@ function shortDate(s){var d=parseYmd(s);return d.getDate()+" "+MONTHS[d.getMonth
 /* ---------- storage ---------- */
 var db;
 function blank(){return {version:1,days:{}}}
+function blankDay(){return {wake:"",minutes:null,rating:null,note:"",hourly:{},murli:0,churned:false,churnedPoint:"",practiced:false,practicedPoint:""}}
+function clampMurli(v){
+  if(v===""||v==null||isNaN(+v))return 0;
+  return Math.max(0,Math.min(MURLI_MAX,Math.round(+v)));
+}
 function load(){
   var raw=null;
   try{raw=localStorage.getItem(KEY)}catch(e){}
@@ -238,17 +272,34 @@ function normalize(o){
     var r=+d.rating;
     out.days[k]={wake:toMin(d.wake)!=null?d.wake.slice(0,5):"",
       minutes:d.minutes===""||d.minutes==null||isNaN(+d.minutes)?null:Math.max(0,+d.minutes),
-      rating:r>=1&&r<=5?Math.round(r):null,note:typeof d.note==="string"?d.note:"",hourly:hr};
+      rating:r>=1&&r<=5?Math.round(r):null,note:typeof d.note==="string"?d.note:"",hourly:hr,
+      murli:clampMurli(d.murli),
+      churned:!!d.churned,
+      churnedPoint:typeof d.churnedPoint==="string"?d.churnedPoint:"",
+      practiced:!!d.practiced,
+      practicedPoint:typeof d.practicedPoint==="string"?d.practicedPoint:""};
   });
   return out;
 }
 function persist(o){try{localStorage.setItem(KEY,JSON.stringify(o||db));return true}catch(e){return false}}
-function getDay(s){return db.days[s]||{wake:"",minutes:null,rating:null,note:"",hourly:{}}}
-function isEmptyDay(d){return !d.wake&&d.minutes==null&&!d.rating&&!d.note&&!Object.keys(d.hourly||{}).length}
+function getDay(s){
+  var d=db.days[s];
+  if(!d)return blankDay();
+  return {
+    wake:d.wake||"",minutes:d.minutes==null?null:d.minutes,rating:d.rating||null,
+    note:d.note||"",hourly:d.hourly||{},murli:clampMurli(d.murli),
+    churned:!!d.churned,churnedPoint:typeof d.churnedPoint==="string"?d.churnedPoint:"",
+    practiced:!!d.practiced,practicedPoint:typeof d.practicedPoint==="string"?d.practicedPoint:""
+  };
+}
+function hasMorning(d){
+  return !!(d.wake||d.minutes!=null||d.rating||d.note||(d.murli&&d.murli>0)||d.churned||d.churnedPoint||d.practiced||d.practicedPoint);
+}
+function isEmptyDay(d){return !hasMorning(d)&&!Object.keys(d.hourly||{}).length}
 function putDay(s,d){if(isEmptyDay(d))delete db.days[s];else db.days[s]=d;persist()}
 
 /* ---------- today view ---------- */
-var cur=today(),curRating=null,dirty=false;
+var cur=today(),curRating=null,curMurli=0,dirty=false;
 function renderRatingButtons(){
   var w=$("rating");w.innerHTML="";
   for(var i=1;i<=5;i++){
@@ -258,6 +309,30 @@ function renderRatingButtons(){
     b.dataset.r=i;w.appendChild(b);
   }
 }
+function renderMurli(){
+  $("murliVal").textContent=String(curMurli);
+  $("murliMinus").disabled=curMurli<=0;
+  $("murliPlus").disabled=curMurli>=MURLI_MAX;
+}
+function setCheck(id,on){
+  var b=$(id);
+  b.classList.toggle("on",!!on);
+  b.setAttribute("aria-pressed",on?"true":"false");
+}
+function readForm(d){
+  var m=$("mins").value.trim();
+  d.wake=$("wake").value||"";
+  d.minutes=m===""?null:Math.max(0,Math.min(600,Math.round(+m)||0));
+  d.rating=curRating;
+  d.note=$("note").value.trim();
+  d.murli=curMurli;
+  d.churned=$("churned").getAttribute("aria-pressed")==="true";
+  d.churnedPoint=$("churnedPoint").value.trim();
+  d.practiced=$("practiced").getAttribute("aria-pressed")==="true";
+  d.practicedPoint=$("practicedPoint").value.trim();
+  d.hourly=d.hourly||{};
+  return d;
+}
 function loadForm(){
   var d=getDay(cur);
   $("date").value=cur;
@@ -265,9 +340,15 @@ function loadForm(){
   $("mins").value=d.minutes==null?"":d.minutes;
   $("note").value=d.note||"";
   curRating=d.rating||null;
+  curMurli=clampMurli(d.murli);
   renderRatingButtons();
+  renderMurli();
+  setCheck("churned",d.churned);
+  $("churnedPoint").value=d.churnedPoint||"";
+  setCheck("practiced",d.practiced);
+  $("practicedPoint").value=d.practicedPoint||"";
   $("savedMsg").textContent=db.days[cur]&&(d.wake||d.minutes!=null||d.rating)?"Saved entry loaded":"";
-  $("save").textContent=db.days[cur]&&(d.wake||d.minutes!=null||d.rating||d.note)?"Update morning log":"Save morning log";
+  $("save").textContent=db.days[cur]&&hasMorning(d)?"Update Amritvela":"Save Amritvela";
   $("nextDay").disabled=cur>=today();
   var t=today();
   $("greeting").textContent=cur===t?"Today · "+niceDate(cur):niceDate(cur);
@@ -275,17 +356,11 @@ function loadForm(){
   renderGrid();
 }
 function saveForm(){
-  var d=getDay(cur);
-  var m=$("mins").value.trim();
-  d.wake=$("wake").value||"";
-  d.minutes=m===""?null:Math.max(0,Math.min(600,Math.round(+m)||0));
-  d.rating=curRating;
-  d.note=$("note").value.trim();
-  d.hourly=d.hourly||{};
+  var d=readForm(getDay(cur));
   putDay(cur,d);
   dirty=false;
   $("savedMsg").textContent="Saved";
-  $("save").textContent="Update morning log";
+  $("save").textContent="Update Amritvela";
   refreshOthers();
 }
 function renderGrid(){
@@ -319,7 +394,7 @@ function setSlot(val){
   if(sheetHour==null)return;
   var d=getDay(cur);d.hourly=d.hourly||{};
   // keep any unsaved morning edits in the day object too
-  if(dirty){var m=$("mins").value.trim();d.wake=$("wake").value||"";d.minutes=m===""?null:Math.max(0,Math.round(+m)||0);d.rating=curRating;d.note=$("note").value.trim();dirty=false;$("savedMsg").textContent="Saved"}
+  if(dirty){readForm(d);dirty=false;$("savedMsg").textContent="Saved"}
   if(val==null)delete d.hourly[sheetHour];else d.hourly[sheetHour]=val;
   putDay(cur,d);closeSheet();renderGrid();refreshOthers();
 }
@@ -351,19 +426,40 @@ function bestStreak(){
   });
   return best;
 }
+function hasCheckDay(s,field){var d=db.days[s];return !!(d&&d[field])}
+function currentFieldStreak(field){
+  var t=today(),s=hasCheckDay(t,field)?t:addDays(t,-1),n=0,g=0;
+  while(hasCheckDay(s,field)&&g++<5000){n++;s=addDays(s,-1)}
+  return n;
+}
+function bestFieldStreak(field){
+  var keys=sortedKeys(),best=0,run=0,prev=null;
+  keys.forEach(function(k){
+    if(hasCheckDay(k,field)){run=(prev&&addDays(prev,1)===k&&hasCheckDay(prev,field))?run+1:1;best=Math.max(best,run)}else run=0;
+    prev=k;
+  });
+  return best;
+}
 function renderStats(dates){
-  var rs=[],mins=0,pm=0,early=0,logged=0;
+  var rs=[],mins=0,pm=0,early=0,logged=0,murli=0,churned=0,practiced=0;
   dates.forEach(function(s){var d=db.days[s];if(!d)return;logged++;
-    if(d.rating)rs.push(d.rating);if(d.minutes)mins+=d.minutes;pm+=pauseMinutes(d);if(onTime(s))early++});
+    if(d.rating)rs.push(d.rating);if(d.minutes)mins+=d.minutes;pm+=pauseMinutes(d);if(onTime(s))early++;
+    murli+=clampMurli(d.murli);if(d.churned)churned++;if(d.practiced)practiced++});
   var avg=rs.length?(rs.reduce(function(a,b){return a+b},0)/rs.length).toFixed(1):"–";
+  var murliAvg=logged?(murli/logged).toFixed(1):"–";
   var cs=currentStreak(),bs=bestStreak();
+  var cSt=currentFieldStreak("churned"),cBest=bestFieldStreak("churned");
+  var pSt=currentFieldStreak("practiced"),pBest=bestFieldStreak("practiced");
   var items=[
     [cs+(cs===1?" day":" days"),"4 AM streak (best "+bs+")"],
     [avg===("–")?"–":avg+" / 5","Average rating"],
-    [fmtHM(mins),"Morning meditation"],
+    [fmtHM(mins),"Amritvela meditation"],
     [fmtHM(pm),"Hourly pause time"],
     [early+" / "+logged,"Days up by 4:15"],
-    [logged+"","Days logged"]
+    [logged+"","Days logged"],
+    [String(murli),murliAvg==="–"?"Murli reads":"Murli reads (avg "+murliAvg+"/day)"],
+    [churned+" / "+logged,"Churned · streak "+cSt+" (best "+cBest+")"],
+    [practiced+" / "+logged,"Practiced · streak "+pSt+" (best "+pBest+")"]
   ];
   $("stats").innerHTML=items.map(function(i){return '<div class="stat"><div class="v">'+esc(i[0])+'</div><div class="k">'+esc(i[1])+'</div></div>'}).join("");
 }
@@ -385,8 +481,8 @@ function barChart(el,dates,valFn,maxFixed,ticks,fmtTick,colorFn,label){
   var vals=dates.map(function(s){var d=db.days[s];return d?valFn(d,s):null});
   if(!vals.some(function(v){return v!=null&&v>0})){el.innerHTML='<div class="empty">No entries in this range yet</div>';return}
   var max=maxFixed||Math.max.apply(null,vals.map(function(v){return v||0}));
-  if(!maxFixed){var nice=[5,10,15,20,30,45,60,90,120,180,240,360,600];for(var i=0;i<nice.length;i++)if(nice[i]>=max){max=nice[i];break}
-    ticks=[0,max/2,max]}
+  if(!maxFixed){var nice=[1,2,3,4,5,6,8,10,15,20,30,45,60,90,120,180,240,360,600];for(var i=0;i<nice.length;i++)if(nice[i]>=max){max=nice[i];break}
+    if(max<=10){ticks=[];for(var t=0;t<=max;t++)ticks.push(t)}else ticks=[0,max/2,max]}
   var ch=H-PT-PB,yOf=function(v){return PT+ch-(v/max)*ch};
   var n=dates.length,cw=(W-PL-PR)/n,bw=Math.max(2,Math.min(28,cw*.65)),s=gridLines(ticks,yOf,fmtTick);
   vals.forEach(function(v,i){if(v==null||v<=0)return;var vv=Math.min(v,max);
@@ -417,8 +513,9 @@ function renderProgress(){
   var dates=rangeDates();
   renderStats(dates);
   wakeChart($("cWake"),dates);
-  barChart($("cMins"),dates,function(d){return d.minutes},0,null,function(v){return Math.round(v)},null,"Morning minutes chart");
+  barChart($("cMins"),dates,function(d){return d.minutes},0,null,function(v){return Math.round(v)},null,"Amritvela minutes chart");
   barChart($("cRating"),dates,function(d){return d.rating},5,[0,1,2,3,4,5],function(v){return v},function(v){return v>=3?"var(--accent)":"var(--warn)"},"Rating chart");
+  barChart($("cMurli"),dates,function(d){return clampMurli(d.murli)},0,[0,1,2,3,4,5],function(v){return Math.round(v)},null,"Murli reads chart");
   barChart($("cPauses"),dates,function(d){return pausesDone(d)},17,[0,4,8,12,17],function(v){return v},null,"Hourly pauses chart");
 }
 
@@ -428,11 +525,18 @@ function renderHistory(){
   if(!keys.length){ul.innerHTML='<li><div class="empty" style="width:100%">No entries yet</div></li>';return}
   ul.innerHTML=keys.map(function(k){var d=db.days[k],bits=[];
     if(d.wake)bits.push("Woke "+fmtTime(toMin(d.wake)));
-    if(d.minutes!=null)bits.push(d.minutes+" min");
+    if(d.minutes!=null)bits.push(d.minutes+" min Amritvela");
     if(d.rating)bits.push(d.rating+"/5");
+    if(clampMurli(d.murli)>0)bits.push("Murli ×"+clampMurli(d.murli));
+    if(d.churned)bits.push("Churned");
+    if(d.practiced)bits.push("Practiced");
     bits.push(pausesDone(d)+"/17 pauses");
-    return '<li><div class="body"><div class="d">'+esc(niceDate(k))+'</div><div class="m">'+esc(bits.join(" · "))+'</div>'+
-      (d.note?'<div class="n">'+esc(d.note)+'</div>':'<div class="m" style="font-style:italic">No note</div>')+
+    var extra="";
+    if(d.note)extra+='<div class="n">'+esc(d.note)+'</div>';
+    else extra+='<div class="m" style="font-style:italic">No note</div>';
+    if(d.churned&&d.churnedPoint)extra+='<div class="n">Churned: '+esc(d.churnedPoint)+'</div>';
+    if(d.practiced&&d.practicedPoint)extra+='<div class="n">Practiced: '+esc(d.practicedPoint)+'</div>';
+    return '<li><div class="body"><div class="d">'+esc(niceDate(k))+'</div><div class="m">'+esc(bits.join(" · "))+'</div>'+extra+
       '</div><button data-edit="'+k+'">Edit</button></li>'}).join("");
 }
 function refreshOthers(){renderHistory();renderProgress()}
@@ -482,7 +586,12 @@ function makeIcons(){
 db=load();
 makeIcons();
 $("rating").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;var r=+b.dataset.r;curRating=curRating===r?null:r;dirty=true;renderRatingButtons();$("savedMsg").textContent=""});
-["wake","mins","note"].forEach(function(id){$(id).addEventListener("input",function(){dirty=true;$("savedMsg").textContent=""})});
+["wake","mins","note","churnedPoint","practicedPoint"].forEach(function(id){$(id).addEventListener("input",function(){dirty=true;$("savedMsg").textContent=""})});
+$("murliMinus").addEventListener("click",function(){if(curMurli<=0)return;curMurli--;dirty=true;renderMurli();$("savedMsg").textContent=""});
+$("murliPlus").addEventListener("click",function(){if(curMurli>=MURLI_MAX)return;curMurli++;dirty=true;renderMurli();$("savedMsg").textContent=""});
+function toggleCheck(id){var on=$(""+id).getAttribute("aria-pressed")!=="true";setCheck(id,on);dirty=true;$("savedMsg").textContent=""}
+$("churned").addEventListener("click",function(){toggleCheck("churned")});
+$("practiced").addEventListener("click",function(){toggleCheck("practiced")});
 $("save").addEventListener("click",saveForm);
 $("date").addEventListener("change",function(){var v=$("date").value;if(v)goDate(v)});
 $("prevDay").addEventListener("click",function(){goDate(addDays(cur,-1))});
@@ -507,7 +616,7 @@ window.addEventListener("storage",function(e){if(e.key===KEY){db=load();loadForm
 document.addEventListener("visibilitychange",function(){if(!document.hidden)renderGrid()});
 setInterval(renderGrid,60000);
 loadForm();refreshOthers();
-window.__mt={doImport:doImport,db:function(){return db}};
+window.__mt={doImport:doImport,db:function(){return db},KEY:KEY};
 })();
 </script>
 </body>
