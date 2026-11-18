@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Meditation Tracker</title>
+<meta name="description" content="Track morning meditation, 4 AM wake-ups and hourly pauses. Works offline.">
+<meta name="theme-color" content="#f6f4ef" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16181c" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Meditation">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%23557a6b'/%3E%3Ccircle cx='256' cy='256' r='120' fill='none' stroke='%23f6f4ef' stroke-width='28'/%3E%3Ccircle cx='256' cy='256' r='34' fill='%23f6f4ef'/%3E%3C/svg%3E">
+<link rel="manifest" id="manifestLink" href="data:application/manifest+json,%7B%22name%22%3A%22Meditation%20Tracker%22%2C%22short_name%22%3A%22Meditation%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23f6f4ef%22%2C%22theme_color%22%3A%22%23557a6b%22%2C%22start_url%22%3A%22.%22%7D">
+<link rel="apple-touch-icon" id="appleIcon" href="">
+<style>
+:root{
+  --bg:#f6f4ef;--card:#ffffff;--text:#23262b;--muted:#6b7078;--line:#e3e0d8;
+  --accent:#557a6b;--accent-soft:#dfe9e4;--warn:#b5835a;--warn-soft:#f2e6da;--skip:#c9c5bc;
+  --shadow:0 1px 2px rgba(0,0,0,.04),0 2px 10px rgba(0,0,0,.04);
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#16181c;--card:#1f2227;--text:#e7e5e0;--muted:#9aa0a8;--line:#30343b;
+  --accent:#8fb8a6;--accent-soft:#2a3a34;--warn:#d6a57c;--warn-soft:#3b3129;--skip:#4a4f57;--shadow:none;}
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);
+  font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans",sans-serif}
+body{padding:env(safe-area-inset-top) 0 calc(76px + env(safe-area-inset-bottom))}
+main{max-width:560px;margin:0 auto;padding:16px}
+h1{font-size:1.35rem;font-weight:600;margin:4px 0 2px}
+h2{font-size:1.05rem;font-weight:600;margin:0 0 12px}
+.sub{color:var(--muted);font-size:.9rem;margin:0 0 14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin:0 0 14px;box-shadow:var(--shadow)}
+label{display:block;font-size:.85rem;color:var(--muted);margin:0 0 6px}
+.field{margin:0 0 14px}
+input,textarea,select{font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px;width:100%;min-height:48px}
+textarea{min-height:76px;resize:vertical}
+input:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
+.row{display:flex;gap:10px;align-items:center}
+.row>*{flex:1}
+button{font:inherit;cursor:pointer;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);min-height:48px;padding:10px 14px}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--card);font-weight:600;width:100%}
+button.ghost{background:transparent}
+button:active{transform:scale(.98)}
+.datebar{display:flex;gap:8px;align-items:center;margin:0 0 14px}
+.datebar input{flex:1;text-align:center}
+.datebar button{width:48px;padding:0;flex:none}
+.rating{display:flex;gap:8px}
+.rating button{flex:1;font-size:1.1rem;font-weight:600}
+.rating button.on{background:var(--accent);border-color:var(--accent);color:var(--card)}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chips button{flex:1;min-width:56px}
+.chips button.on{background:var(--accent-soft);border-color:var(--accent)}
+.hint{font-size:.82rem;color:var(--muted)}
+.saved{color:var(--accent);font-size:.9rem;min-height:1.3em;margin-top:8px;text-align:center}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.slot{min-height:64px;padding:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:12px}
+.slot .t{font-weight:600;font-size:.95rem}
+.slot .s{font-size:.75rem;color:var(--muted)}
+.slot.done{background:var(--accent-soft);border-color:var(--accent)}
+.slot.done .s{color:var(--accent)}
+.slot.skipped{background:var(--bg);border-style:dashed}
+.slot.now{outline:2px solid var(--warn);outline-offset:1px}
+.slot.now .t::after{content:" · now";font-weight:400;font-size:.72rem;color:var(--warn)}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:0 0 14px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}
+.stat .v{font-size:1.4rem;font-weight:600}
+.stat .k{font-size:.8rem;color:var(--muted)}
+.seg{display:flex;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:3px;margin:0 0 14px}
+.seg button{flex:1;border:0;background:transparent;min-height:42px}
+.seg button.on{background:var(--accent-soft);font-weight:600}
+svg.chart{width:100%;height:auto;display:block}
+svg.chart text{fill:var(--muted);font-size:10px}
+.empty{color:var(--muted);text-align:center;padding:18px 0;font-size:.9rem}
+.hist{list-style:none;margin:0;padding:0}
+.hist li{border-bottom:1px solid var(--line);padding:12px 0;display:flex;gap:10px;align-items:flex-start}
+.hist li:last-child{border-bottom:0}
+.hist .d{font-weight:600}
+.hist .m{font-size:.85rem;color:var(--muted)}
+.hist .n{margin-top:4px;font-size:.92rem;white-space:pre-wrap;word-break:break-word}
+.hist button{flex:none;min-height:40px;padding:6px 12px;font-size:.85rem}
+.hist .body{flex:1;min-width:0}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:flex;padding:6px 6px calc(6px + env(safe-area-inset-bottom));z-index:5}
+nav button{flex:1;border:0;background:transparent;color:var(--muted);min-height:54px;font-size:.88rem}
+nav button.on{color:var(--accent);font-weight:600}
+.view{display:none}.view.on{display:block}
+.sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;z-index:10;align-items:flex-end;justify-content:center}
+.sheet-bg.on{display:flex}
+.sheet{background:var(--card);width:100%;max-width:560px;border-radius:20px 20px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
+.sheet .chips{margin:0 0 12px}
+.legend{display:flex;gap:14px;font-size:.78rem;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+</style>
+</head>
+<body>
+<main>
+  <section class="view on" id="v-today">
+    <h1>Meditation Tracker</h1>
+    <p class="sub" id="greeting">Morning practice and hourly pauses</p>
+    <div class="datebar">
+      <button class="ghost" id="prevDay" aria-label="Previous day">&#8249;</button>
+      <input type="date" id="date" aria-label="Date">
+      <button class="ghost" id="nextDay" aria-label="Next day">&#8250;</button>
+    </div>
+    <div class="card">
+      <h2>Morning log</h2>
+      <div class="row">
+        <div class="field"><label for="wake">Woke up at (target 4:00)</label><input type="time" id="wake"></div>
+        <div class="field"><label for="mins">Meditation minutes</label><input type="number" id="mins" inputmode="numeric" min="0" max="600" placeholder="0"></div>
+      </div>
+      <div class="field">
+        <label>How effective did it feel?</label>
+        <div class="rating" id="rating" role="radiogroup" aria-label="Rating 1 to 5"></div>
+        <div class="hint" id="ratingHint" style="margin-top:6px">1 = scattered, 5 = deep and still</div>
+      </div>
+      <div class="field"><label for="note">Note (what helped or distracted)</label><textarea id="note" maxlength="1000" placeholder="Optional"></textarea></div>
+      <button class="primary" id="save">Save morning log</button>
+      <div class="saved" id="savedMsg" aria-live="polite"></div>
+    </div>
+    <div class="card">
+      <h2>Hourly pauses <span class="hint" id="pauseCount"></span></h2>
+      <div class="grid" id="grid"></div>
+      <p class="hint" style="margin:10px 0 0">Tap an hour to mark a pause done or skipped.</p>
+    </div>
+  </section>
+
+  <section class="view" id="v-progress">
+    <h1>Progress</h1>
+    <p class="sub">Streak counts days woken by 4:15 AM.</p>
+    <div class="seg" id="range">
+      <button data-r="7" class="on">7 days</button><button data-r="30">30 days</button><button data-r="all">All time</button>
+    </div>
+    <div class="stats" id="stats"></div>
+    <div class="card"><h2>Wake-up time</h2><div id="cWake"></div>
+      <div class="legend"><span><i style="background:var(--accent)"></i>By 4:15</span><span><i style="background:var(--warn)"></i>Later</span><span><i style="background:var(--muted);height:2px"></i>4:00 target</span></div></div>
+    <div class="card"><h2>Morning minutes</h2><div id="cMins"></div></div>
+    <div class="card"><h2>Rating</h2><div id="cRating"></div></div>
+    <div class="card"><h2>Hourly pauses done (of 17)</h2><div id="cPauses"></div></div>
+  </section>
+
+  <section class="view" id="v-history">
+    <h1>History</h1>
+    <p class="sub">Tap Edit to change a day.</p>
+    <div class="card"><ul class="hist" id="hist"></ul></div>
+  </section>
+
+  <section class="view" id="v-data">
+    <h1>Backup</h1>
+    <p class="sub">Your entries are stored only in this browser on this device.</p>
+    <div class="card">
+      <h2>Export</h2>
+      <p class="hint" style="margin-top:0">Download all entries as a JSON file. Do this regularly so clearing browser data doesn't erase your history.</p>
+      <button class="primary" id="exportBtn">Export JSON</button>
+    </div>
+    <div class="card">
+      <h2>Import</h2>
+      <p class="hint" style="margin-top:0">Load a previously exported file. Days in the file replace the same days here; other days are kept.</p>
+      <input type="file" id="importFile" accept="application/json,.json" style="display:none">
+      <button class="primary" id="importBtn">Import JSON</button>
+      <div class="saved" id="importMsg" aria-live="polite"></div>
+    </div>
+  </section>
+</main>
+
+<nav>
+  <button data-v="today" class="on">Today</button>
+  <button data-v="progress">Progress</button>
+  <button data-v="history">History</button>
+  <button data-v="data">Backup</button>
+</nav>
+
+<div class="sheet-bg" id="sheetBg">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <h2 id="sheetTitle">Pause</h2>
+    <label>Done, minutes</label>
+    <div class="chips" id="minChips">
+      <button data-m="1">1</button><button data-m="2">2</button><button data-m="5">5</button>
+    </div>
+    <div class="row" style="margin:0 0 12px">
+      <input type="number" id="customMin" inputmode="numeric" min="1" max="120" placeholder="Other minutes">
+      <button id="customOk" style="flex:none">Done</button>
+    </div>
+    <div class="row">
+      <button id="skipBtn">Skipped</button>
+      <button id="clearBtn">Clear</button>
+      <button id="closeBtn" class="ghost">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+var KEY="meditationTracker.v1";
+var HOURS=[];for(var h=5;h<=21;h++)HOURS.push(h);
+var STREAK_LIMIT=4*60+15;
+var $=function(id){return document.getElementById(id)};
+
+function pad(n){return (n<10?"0":"")+n}
+function ymd(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())}
+function parseYmd(s){var p=s.split("-");return new Date(+p[0],+p[1]-1,+p[2])}
+function addDays(s,n){var d=parseYmd(s);d.setDate(d.getDate()+n);return ymd(d)}
+function today(){return ymd(new Date())}
+function toMin(t){if(!t||!/^\d{1,2}:\d{2}/.test(t))return null;var p=t.split(":");return +p[0]*60+ +p[1]}
+function fmtTime(m){if(m==null)return"–";var h=Math.floor(m/60),mm=m%60,ap=h>=12?"PM":"AM",hh=h%12||12;return hh+":"+pad(mm)+" "+ap}
+function hourLabel(h){var ap=h>=12?"PM":"AM";return (h%12||12)+" "+ap}
+var MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+var WD=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+function niceDate(s){var d=parseYmd(s);return WD[d.getDay()]+", "+d.getDate()+" "+MONTHS[d.getMonth()]+" "+d.getFullYear()}
+function shortDate(s){var d=parseYmd(s);return d.getDate()+" "+MONTHS[d.getMonth()]}
+
+/* ---------- storage ---------- */
+var db;
+function blank(){return {version:1,days:{}}}
+function load(){
+  var raw=null;
+  try{raw=localStorage.getItem(KEY)}catch(e){}
+  if(raw){try{var o=JSON.parse(raw);if(o&&o.days&&typeof o.days==="object")return normalize(o)}catch(e){}}
+  var fresh=blank();
+  fresh.days["2026-11-18"]={wake:"04:00",minutes:20,rating:1,note:"",hourly:{}};
+  persist(fresh);
+  return fresh;
+}
+function normalize(o){
+  var out=blank();
+  Object.keys(o.days||{}).forEach(function(k){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(k))return;
+    var d=o.days[k]||{},hr={};
+    Object.keys(d.hourly||{}).forEach(function(h){
+      var v=d.hourly[h];var hn=+h;
+      if(hn<5||hn>21||!v)return;
+      if(v.status==="done")hr[hn]={status:"done",min:Math.max(1,Math.min(600,+v.min||1))};
+      else if(v.status==="skipped")hr[hn]={status:"skipped"};
+    });
+    var r=+d.rating;
+    out.days[k]={wake:toMin(d.wake)!=null?d.wake.slice(0,5):"",
+      minutes:d.minutes===""||d.minutes==null||isNaN(+d.minutes)?null:Math.max(0,+d.minutes),
+      rating:r>=1&&r<=5?Math.round(r):null,note:typeof d.note==="string"?d.note:"",hourly:hr};
+  });
+  return out;
+}
+function persist(o){try{localStorage.setItem(KEY,JSON.stringify(o||db));return true}catch(e){return false}}
+function getDay(s){return db.days[s]||{wake:"",minutes:null,rating:null,note:"",hourly:{}}}
+function isEmptyDay(d){return !d.wake&&d.minutes==null&&!d.rating&&!d.note&&!Object.keys(d.hourly||{}).length}
+function putDay(s,d){if(isEmptyDay(d))delete db.days[s];else db.days[s]=d;persist()}
+
+/* ---------- today view ---------- */
+var cur=today(),curRating=null,dirty=false;
+function renderRatingButtons(){
+  var w=$("rating");w.innerHTML="";
+  for(var i=1;i<=5;i++){
+    var b=document.createElement("button");b.type="button";b.textContent=i;b.setAttribute("role","radio");
+    b.setAttribute("aria-checked",curRating===i?"true":"false");
+    if(curRating&&i<=curRating)b.className="on";
+    b.dataset.r=i;w.appendChild(b);
+  }
+}
+function loadForm(){
+  var d=getDay(cur);
+  $("date").value=cur;
+  $("wake").value=d.wake||"";
+  $("mins").value=d.minutes==null?"":d.minutes;
+  $("note").value=d.note||"";
+  curRating=d.rating||null;
+  renderRatingButtons();
+  $("savedMsg").textContent=db.days[cur]&&(d.wake||d.minutes!=null||d.rating)?"Saved entry loaded":"";
+  $("save").textContent=db.days[cur]&&(d.wake||d.minutes!=null||d.rating||d.note)?"Update morning log":"Save morning log";
+  $("nextDay").disabled=cur>=today();
+  var t=today();
+  $("greeting").textContent=cur===t?"Today · "+niceDate(cur):niceDate(cur);
+  dirty=false;
+  renderGrid();
+}
+function saveForm(){
+  var d=getDay(cur);
+  var m=$("mins").value.trim();
+  d.wake=$("wake").value||"";
+  d.minutes=m===""?null:Math.max(0,Math.min(600,Math.round(+m)||0));
+  d.rating=curRating;
+  d.note=$("note").value.trim();
+  d.hourly=d.hourly||{};
+  putDay(cur,d);
+  dirty=false;
+  $("savedMsg").textContent="Saved";
+  $("save").textContent="Update morning log";
+  refreshOthers();
+}
+function renderGrid(){
+  var d=getDay(cur),g=$("grid");g.innerHTML="";
+  var now=new Date(),isToday=cur===today(),done=0;
+  HOURS.forEach(function(h){
+    var v=d.hourly[h],b=document.createElement("button");
+    b.type="button";b.className="slot";b.dataset.h=h;
+    var st="Tap to log";
+    if(v&&v.status==="done"){b.className+=" done";st=v.min+" min";done++}
+    else if(v&&v.status==="skipped"){b.className+=" skipped";st="Skipped"}
+    if(isToday&&now.getHours()===h)b.className+=" now";
+    b.innerHTML='<span class="t">'+hourLabel(h)+'</span><span class="s">'+st+'</span>';
+    b.setAttribute("aria-label",hourLabel(h)+", "+st);
+    g.appendChild(b);
+  });
+  $("pauseCount").textContent="· "+done+" of 17 done";
+}
+var sheetHour=null;
+function openSheet(h){
+  sheetHour=h;var v=getDay(cur).hourly[h];
+  $("sheetTitle").textContent=hourLabel(h)+" pause";
+  Array.prototype.forEach.call($("minChips").children,function(c){
+    c.className=v&&v.status==="done"&&+c.dataset.m===v.min?"on":"";
+  });
+  $("customMin").value=v&&v.status==="done"&&[1,2,5].indexOf(v.min)<0?v.min:"";
+  $("sheetBg").classList.add("on");
+}
+function closeSheet(){$("sheetBg").classList.remove("on");sheetHour=null}
+function setSlot(val){
+  if(sheetHour==null)return;
+  var d=getDay(cur);d.hourly=d.hourly||{};
+  // keep any unsaved morning edits in the day object too
+  if(dirty){var m=$("mins").value.trim();d.wake=$("wake").value||"";d.minutes=m===""?null:Math.max(0,Math.round(+m)||0);d.rating=curRating;d.note=$("note").value.trim();dirty=false;$("savedMsg").textContent="Saved"}
+  if(val==null)delete d.hourly[sheetHour];else d.hourly[sheetHour]=val;
+  putDay(cur,d);closeSheet();renderGrid();refreshOthers();
+}
+
+/* ---------- progress ---------- */
+var range="7";
+function sortedKeys(){return Object.keys(db.days).sort()}
+function rangeDates(){
+  var keys=sortedKeys(),t=today(),end=keys.length&&keys[keys.length-1]>t?keys[keys.length-1]:t,start;
+  if(range==="all"){start=keys.length?keys[0]:t;if(start>end)start=end}
+  else start=addDays(end,-(+range-1));
+  var out=[],s=start,guard=0;
+  while(s<=end&&guard++<4000){out.push(s);s=addDays(s,1)}
+  return out;
+}
+function pausesDone(d){var n=0;Object.keys(d.hourly||{}).forEach(function(h){if(d.hourly[h].status==="done")n++});return n}
+function pauseMinutes(d){var n=0;Object.keys(d.hourly||{}).forEach(function(h){if(d.hourly[h].status==="done")n+=d.hourly[h].min});return n}
+function onTime(s){var d=db.days[s];var m=d&&toMin(d.wake);return m!=null&&m<=STREAK_LIMIT}
+function currentStreak(){
+  var t=today(),s=onTime(t)?t:addDays(t,-1),n=0,g=0;
+  while(onTime(s)&&g++<5000){n++;s=addDays(s,-1)}
+  return n;
+}
+function bestStreak(){
+  var keys=sortedKeys(),best=0,run=0,prev=null;
+  keys.forEach(function(k){
+    if(onTime(k)){run=(prev&&addDays(prev,1)===k&&onTime(prev))?run+1:1;best=Math.max(best,run)}else run=0;
+    prev=k;
+  });
+  return best;
+}
+function renderStats(dates){
+  var rs=[],mins=0,pm=0,early=0,logged=0;
+  dates.forEach(function(s){var d=db.days[s];if(!d)return;logged++;
+    if(d.rating)rs.push(d.rating);if(d.minutes)mins+=d.minutes;pm+=pauseMinutes(d);if(onTime(s))early++});
+  var avg=rs.length?(rs.reduce(function(a,b){return a+b},0)/rs.length).toFixed(1):"–";
+  var cs=currentStreak(),bs=bestStreak();
+  var items=[
+    [cs+(cs===1?" day":" days"),"4 AM streak (best "+bs+")"],
+    [avg===("–")?"–":avg+" / 5","Average rating"],
+    [fmtHM(mins),"Morning meditation"],
+    [fmtHM(pm),"Hourly pause time"],
+    [early+" / "+logged,"Days up by 4:15"],
+    [logged+"","Days logged"]
+  ];
+  $("stats").innerHTML=items.map(function(i){return '<div class="stat"><div class="v">'+esc(i[0])+'</div><div class="k">'+esc(i[1])+'</div></div>'}).join("");
+}
+function fmtHM(m){if(!m)return"0 min";if(m<60)return m+" min";var h=Math.floor(m/60),r=m%60;return h+" h"+(r?" "+r+" m":"")}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+
+var W=340,H=170,PL=34,PR=8,PT=10,PB=24;
+function xLabels(dates){
+  var n=dates.length,step=Math.max(1,Math.ceil(n/6)),out="",cw=(W-PL-PR)/n;
+  for(var i=0;i<n;i+=step){out+='<text x="'+(PL+cw*i+cw/2).toFixed(1)+'" y="'+(H-8)+'" text-anchor="middle">'+shortDate(dates[i])+'</text>'}
+  return out;
+}
+function svgWrap(inner,label){return '<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(label)+'">'+inner+'</svg>'}
+function gridLines(ticks,yOf,fmt){
+  return ticks.map(function(t){var y=yOf(t).toFixed(1);
+    return '<line x1="'+PL+'" x2="'+(W-PR)+'" y1="'+y+'" y2="'+y+'" stroke="var(--line)" stroke-width="1"/><text x="'+(PL-5)+'" y="'+(+y+3)+'" text-anchor="end">'+fmt(t)+'</text>'}).join("");
+}
+function barChart(el,dates,valFn,maxFixed,ticks,fmtTick,colorFn,label){
+  var vals=dates.map(function(s){var d=db.days[s];return d?valFn(d,s):null});
+  if(!vals.some(function(v){return v!=null&&v>0})){el.innerHTML='<div class="empty">No entries in this range yet</div>';return}
+  var max=maxFixed||Math.max.apply(null,vals.map(function(v){return v||0}));
+  if(!maxFixed){var nice=[5,10,15,20,30,45,60,90,120,180,240,360,600];for(var i=0;i<nice.length;i++)if(nice[i]>=max){max=nice[i];break}
+    ticks=[0,max/2,max]}
+  var ch=H-PT-PB,yOf=function(v){return PT+ch-(v/max)*ch};
+  var n=dates.length,cw=(W-PL-PR)/n,bw=Math.max(2,Math.min(28,cw*.65)),s=gridLines(ticks,yOf,fmtTick);
+  vals.forEach(function(v,i){if(v==null||v<=0)return;var vv=Math.min(v,max);
+    var x=PL+cw*i+(cw-bw)/2,y=yOf(vv);
+    s+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+(PT+ch-y).toFixed(1)+'" rx="3" fill="'+(colorFn?colorFn(v,dates[i]):"var(--accent)")+'"><title>'+shortDate(dates[i])+": "+v+'</title></rect>';
+  });
+  el.innerHTML=svgWrap(s+xLabels(dates),label);
+}
+function wakeChart(el,dates){
+  var pts=[];dates.forEach(function(s,i){var d=db.days[s];var m=d&&toMin(d.wake);if(m!=null)pts.push([i,m,s])});
+  if(!pts.length){el.innerHTML='<div class="empty">No wake-up times in this range yet</div>';return}
+  var ms=pts.map(function(p){return p[1]});
+  var lo=Math.min(180,Math.floor(Math.min.apply(null,ms)/30)*30),hi=Math.max(330,Math.ceil(Math.max.apply(null,ms)/30)*30);
+  if(hi===lo)hi=lo+60;
+  var ch=H-PT-PB,yOf=function(m){return PT+((m-lo)/(hi-lo))*ch}; // earlier = higher
+  var step=(hi-lo)<=240?30:60,ticks=[];for(var t=lo;t<=hi;t+=step)ticks.push(t);
+  if(ticks.length>6){ticks=ticks.filter(function(_,i){return i%2===0})}
+  var s=gridLines(ticks,yOf,function(m){var h=Math.floor(m/60),mm=m%60;return (h%12||12)+":"+pad(mm)});
+  var ty=yOf(240).toFixed(1);
+  s+='<line x1="'+PL+'" x2="'+(W-PR)+'" y1="'+ty+'" y2="'+ty+'" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="5 4"/>';
+  var n=dates.length,cw=(W-PL-PR)/n,xOf=function(i){return PL+cw*i+cw/2};
+  if(pts.length>1){s+='<polyline fill="none" stroke="var(--accent)" stroke-opacity=".45" stroke-width="1.5" points="'+pts.map(function(p){return xOf(p[0]).toFixed(1)+","+yOf(p[1]).toFixed(1)}).join(" ")+'"/>'}
+  var r=n>40?2.5:4;
+  pts.forEach(function(p){s+='<circle cx="'+xOf(p[0]).toFixed(1)+'" cy="'+yOf(p[1]).toFixed(1)+'" r="'+r+'" fill="'+(p[1]<=STREAK_LIMIT?"var(--accent)":"var(--warn)")+'"><title>'+shortDate(p[2])+": "+fmtTime(p[1])+'</title></circle>'});
+  el.innerHTML=svgWrap(s+xLabels(dates),"Wake-up time chart");
+}
+function renderProgress(){
+  var dates=rangeDates();
+  renderStats(dates);
+  wakeChart($("cWake"),dates);
+  barChart($("cMins"),dates,function(d){return d.minutes},0,null,function(v){return Math.round(v)},null,"Morning minutes chart");
+  barChart($("cRating"),dates,function(d){return d.rating},5,[0,1,2,3,4,5],function(v){return v},function(v){return v>=3?"var(--accent)":"var(--warn)"},"Rating chart");
+  barChart($("cPauses"),dates,function(d){return pausesDone(d)},17,[0,4,8,12,17],function(v){return v},null,"Hourly pauses chart");
+}
+
+/* ---------- history ---------- */
+function renderHistory(){
+  var keys=sortedKeys().reverse(),ul=$("hist");
+  if(!keys.length){ul.innerHTML='<li><div class="empty" style="width:100%">No entries yet</div></li>';return}
+  ul.innerHTML=keys.map(function(k){var d=db.days[k],bits=[];
+    if(d.wake)bits.push("Woke "+fmtTime(toMin(d.wake)));
+    if(d.minutes!=null)bits.push(d.minutes+" min");
+    if(d.rating)bits.push(d.rating+"/5");
+    bits.push(pausesDone(d)+"/17 pauses");
+    return '<li><div class="body"><div class="d">'+esc(niceDate(k))+'</div><div class="m">'+esc(bits.join(" · "))+'</div>'+
+      (d.note?'<div class="n">'+esc(d.note)+'</div>':'<div class="m" style="font-style:italic">No note</div>')+
+      '</div><button data-edit="'+k+'">Edit</button></li>'}).join("");
+}
+function refreshOthers(){renderHistory();renderProgress()}
+
+/* ---------- navigation ---------- */
+function show(v){
+  Array.prototype.forEach.call(document.querySelectorAll(".view"),function(s){s.classList.toggle("on",s.id==="v-"+v)});
+  Array.prototype.forEach.call(document.querySelectorAll("nav button"),function(b){b.classList.toggle("on",b.dataset.v===v)});
+  if(v==="progress")renderProgress();if(v==="history")renderHistory();
+  window.scrollTo(0,0);
+}
+function goDate(s){if(!s)return;if(dirty&&!confirm("Discard unsaved changes for "+niceDate(cur)+"?"))return;cur=s;loadForm()}
+
+/* ---------- export / import ---------- */
+function doExport(){
+  var data=JSON.stringify({app:"Meditation Tracker",exported:new Date().toISOString(),version:1,days:db.days},null,2);
+  var blob=new Blob([data],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download="meditation-tracker-"+today()+".json";document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(url);a.remove()},1000);
+}
+function doImport(text){
+  var o;try{o=JSON.parse(text)}catch(e){$("importMsg").textContent="That file isn't valid JSON.";return false}
+  if(!o||typeof o.days!=="object"){$("importMsg").textContent="No meditation entries found in that file.";return false}
+  var inc=normalize(o),n=Object.keys(inc.days).length;
+  Object.keys(inc.days).forEach(function(k){db.days[k]=inc.days[k]});
+  persist();loadForm();refreshOthers();
+  $("importMsg").textContent="Imported "+n+(n===1?" day":" days")+".";
+  return true;
+}
+
+/* ---------- icon (PNG for iOS / Android home screen) ---------- */
+function makeIcons(){
+  try{
+    var c=document.createElement("canvas");c.width=c.height=192;var x=c.getContext("2d");if(!x)return;
+    x.fillStyle="#557a6b";x.fillRect(0,0,192,192);
+    x.strokeStyle="#f6f4ef";x.lineWidth=11;x.beginPath();x.arc(96,96,46,0,Math.PI*2);x.stroke();
+    x.fillStyle="#f6f4ef";x.beginPath();x.arc(96,96,13,0,Math.PI*2);x.fill();
+    var png=c.toDataURL("image/png");
+    $("appleIcon").href=png;
+    var man={name:"Meditation Tracker",short_name:"Meditation",display:"standalone",background_color:"#f6f4ef",theme_color:"#557a6b",
+      start_url:location.href.split("#")[0],icons:[{src:png,sizes:"192x192",type:"image/png",purpose:"any maskable"}]};
+    $("manifestLink").href="data:application/manifest+json,"+encodeURIComponent(JSON.stringify(man));
+  }catch(e){}
+}
+
+/* ---------- wire up ---------- */
+db=load();
+makeIcons();
+$("rating").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;var r=+b.dataset.r;curRating=curRating===r?null:r;dirty=true;renderRatingButtons();$("savedMsg").textContent=""});
+["wake","mins","note"].forEach(function(id){$(id).addEventListener("input",function(){dirty=true;$("savedMsg").textContent=""})});
+$("save").addEventListener("click",saveForm);
+$("date").addEventListener("change",function(){var v=$("date").value;if(v)goDate(v)});
+$("prevDay").addEventListener("click",function(){goDate(addDays(cur,-1))});
+$("nextDay").addEventListener("click",function(){if(cur<today())goDate(addDays(cur,1))});
+$("grid").addEventListener("click",function(e){var b=e.target.closest(".slot");if(b)openSheet(+b.dataset.h)});
+$("minChips").addEventListener("click",function(e){var b=e.target.closest("button");if(b)setSlot({status:"done",min:+b.dataset.m})});
+$("customOk").addEventListener("click",function(){var m=Math.round(+$("customMin").value);if(m>=1)setSlot({status:"done",min:Math.min(600,m)});else $("customMin").focus()});
+$("skipBtn").addEventListener("click",function(){setSlot({status:"skipped"})});
+$("clearBtn").addEventListener("click",function(){setSlot(null)});
+$("closeBtn").addEventListener("click",closeSheet);
+$("sheetBg").addEventListener("click",function(e){if(e.target===$("sheetBg"))closeSheet()});
+document.addEventListener("keydown",function(e){if(e.key==="Escape")closeSheet()});
+document.querySelector("nav").addEventListener("click",function(e){var b=e.target.closest("button");if(b)show(b.dataset.v)});
+$("range").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;range=b.dataset.r;
+  Array.prototype.forEach.call($("range").children,function(c){c.classList.toggle("on",c===b)});renderProgress()});
+$("hist").addEventListener("click",function(e){var b=e.target.closest("button[data-edit]");if(!b)return;goDate(b.dataset.edit);show("today")});
+$("exportBtn").addEventListener("click",doExport);
+$("importBtn").addEventListener("click",function(){$("importFile").click()});
+$("importFile").addEventListener("change",function(){var f=this.files&&this.files[0];if(!f)return;var r=new FileReader();
+  r.onload=function(){doImport(String(r.result))};r.readAsText(f);this.value=""});
+window.addEventListener("storage",function(e){if(e.key===KEY){db=load();loadForm();refreshOthers()}});
+document.addEventListener("visibilitychange",function(){if(!document.hidden)renderGrid()});
+setInterval(renderGrid,60000);
+loadForm();refreshOthers();
+window.__mt={doImport:doImport,db:function(){return db}};
+})();
+</script>
+</body>
+</html>
