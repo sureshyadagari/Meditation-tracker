@@ -1,6 +1,6 @@
 # Meditation Tracker
 
-A single-file offline web app for an Amritvela log (wake-up time, minutes, a 1–5 rating, a Murli read counter, and a note), checkpoints for a point you churned and a point you practiced, and hourly pauses from 5 AM to 9 PM. Progress shows a wake-by-4:15 streak and simple charts. Everything runs in the browser: inline CSS and JavaScript, no network calls.
+A single-file offline web app for an Amritvela log (wake-up time, minutes, a 1–5 rating, a Murli read counter, and a note), checkpoints for a point you churned and a point you practiced, and traffic control at 5:45, 7:00, 10:30, 12:30, 17:30, 19:30, and 21:30. The Amritvela wake target is 3:30 AM, and Progress shows a wake-by-3:30 streak and simple charts. Everything runs in the browser: inline CSS and JavaScript, no network calls.
 
 Yaad ka chart records the day’s total remembrance time in hours and minutes, and Progress charts that time.
 
