@@ -102,6 +102,14 @@ nav button.on{color:var(--accent);font-weight:600}
 .yaad{margin:4px 0 14px;padding-top:10px;border-top:1px solid var(--line)}
 .yaad h2{margin-bottom:2px}
 .yaad .sub{margin:0 0 10px}
+.sleep{margin:4px 0 14px;padding-top:10px;border-top:1px solid var(--line)}
+.sleep h2{margin-bottom:10px}
+.sleep-row{margin:0 0 12px}
+.sleep-row:last-child{margin-bottom:0}
+.sleep-q{font-size:.9rem;font-weight:500;margin:0 0 6px}
+.yn{display:flex;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:3px}
+.yn button{flex:1;border:0;background:transparent;min-height:42px}
+.yn button.on{background:var(--accent-soft);font-weight:600;color:var(--accent)}
 .check{display:flex;align-items:center;gap:10px;width:100%;text-align:left;margin:0 0 8px;font-weight:500}
 .check .box{width:22px;height:22px;border:2px solid var(--line);border-radius:6px;flex:none;background:var(--bg);position:relative}
 .check.on{background:var(--accent-soft);border-color:var(--accent)}
@@ -171,6 +179,30 @@ main.ptr-snap{transition:transform .22s ease}
           <div class="field" style="margin:0"><label for="yaadM">Minutes</label><input type="number" id="yaadM" inputmode="numeric" min="0" max="59" placeholder="0" aria-label="Yaad minutes"></div>
         </div>
         <div class="hint" id="yaadHint" style="margin-top:8px">0m</div>
+      </div>
+      <div class="sleep" id="sleepChecks">
+        <h2>Before sleep</h2>
+        <div class="sleep-row">
+          <div class="sleep-q" id="sleepPothamelLabel">Gave pothamel to Baba before sleep</div>
+          <div class="yn" role="group" aria-labelledby="sleepPothamelLabel">
+            <button type="button" data-sleep="sleepPothamel" data-val="yes" id="sleepPothamelYes" aria-pressed="false">Yes</button>
+            <button type="button" data-sleep="sleepPothamel" data-val="no" id="sleepPothamelNo" aria-pressed="false">No</button>
+          </div>
+        </div>
+        <div class="sleep-row">
+          <div class="sleep-q" id="sleepMeditationLabel">Did meditation at least 10 mins before sleep</div>
+          <div class="yn" role="group" aria-labelledby="sleepMeditationLabel">
+            <button type="button" data-sleep="sleepMeditation" data-val="yes" id="sleepMeditationYes" aria-pressed="false">Yes</button>
+            <button type="button" data-sleep="sleepMeditation" data-val="no" id="sleepMeditationNo" aria-pressed="false">No</button>
+          </div>
+        </div>
+        <div class="sleep-row">
+          <div class="sleep-q" id="sleepNoPhoneLabel">No phone before sleep</div>
+          <div class="yn" role="group" aria-labelledby="sleepNoPhoneLabel">
+            <button type="button" data-sleep="sleepNoPhone" data-val="yes" id="sleepNoPhoneYes" aria-pressed="false">Yes</button>
+            <button type="button" data-sleep="sleepNoPhone" data-val="no" id="sleepNoPhoneNo" aria-pressed="false">No</button>
+          </div>
+        </div>
       </div>
       <div class="field"><label for="note">Note (what helped or distracted)</label><textarea id="note" maxlength="1000" placeholder="Optional"></textarea></div>
       <button class="primary" id="save">Update chart</button>
@@ -285,7 +317,16 @@ function shortDate(s){var d=parseYmd(s);return d.getDate()+" "+MONTHS[d.getMonth
 /* ---------- storage ---------- */
 var db;
 function blank(){return {version:1,days:{}}}
-function blankDay(){return {wake:"",minutes:null,rating:null,note:"",hourly:{},murli:0,churned:false,churnedPoint:"",practiced:false,practicedPoint:"",yaadMinutes:0}}
+function blankDay(){return {wake:"",minutes:null,rating:null,note:"",hourly:{},murli:0,churned:false,churnedPoint:"",practiced:false,practicedPoint:"",yaadMinutes:0,sleepPothamel:null,sleepMeditation:null,sleepNoPhone:null}}
+function parseYesNo(v){
+  if(v===true||v===false)return v;
+  if(typeof v==="string"){
+    var t=v.toLowerCase();
+    if(t==="true"||t==="yes")return true;
+    if(t==="false"||t==="no")return false;
+  }
+  return null;
+}
 function clampMurli(v){
   if(v===""||v==null||isNaN(+v))return 0;
   return Math.max(0,Math.min(MURLI_MAX,Math.round(+v)));
@@ -348,7 +389,10 @@ function normalize(o){
       churnedPoint:typeof d.churnedPoint==="string"?d.churnedPoint:"",
       practiced:!!d.practiced,
       practicedPoint:typeof d.practicedPoint==="string"?d.practicedPoint:"",
-      yaadMinutes:clampYaad(d.yaadMinutes)};
+      yaadMinutes:clampYaad(d.yaadMinutes),
+      sleepPothamel:parseYesNo(d.sleepPothamel),
+      sleepMeditation:parseYesNo(d.sleepMeditation),
+      sleepNoPhone:parseYesNo(d.sleepNoPhone)};
   });
   return out;
 }
@@ -361,11 +405,14 @@ function getDay(s){
     note:d.note||"",hourly:d.hourly||{},murli:clampMurli(d.murli),
     churned:!!d.churned,churnedPoint:typeof d.churnedPoint==="string"?d.churnedPoint:"",
     practiced:!!d.practiced,practicedPoint:typeof d.practicedPoint==="string"?d.practicedPoint:"",
-    yaadMinutes:clampYaad(d.yaadMinutes)
+    yaadMinutes:clampYaad(d.yaadMinutes),
+    sleepPothamel:parseYesNo(d.sleepPothamel),
+    sleepMeditation:parseYesNo(d.sleepMeditation),
+    sleepNoPhone:parseYesNo(d.sleepNoPhone)
   };
 }
 function hasMorning(d){
-  return !!(d.wake||d.minutes!=null||d.rating||d.note||(d.murli&&d.murli>0)||d.churned||d.churnedPoint||d.practiced||d.practicedPoint||(d.yaadMinutes&&d.yaadMinutes>0));
+  return !!(d.wake||d.minutes!=null||d.rating||d.note||(d.murli&&d.murli>0)||d.churned||d.churnedPoint||d.practiced||d.practicedPoint||(d.yaadMinutes&&d.yaadMinutes>0)||d.sleepPothamel!=null||d.sleepMeditation!=null||d.sleepNoPhone!=null);
 }
 function isEmptyDay(d){return !hasMorning(d)&&!Object.keys(d.hourly||{}).length}
 function putDay(s,d){if(isEmptyDay(d))delete db.days[s];else db.days[s]=d;persist()}
@@ -386,6 +433,20 @@ function renderMurli(){
   $("murliMinus").disabled=curMurli<=0;
   $("murliPlus").disabled=curMurli>=MURLI_MAX;
 }
+function getYesNo(id){
+  if($(id+"Yes").getAttribute("aria-pressed")==="true")return true;
+  if($(id+"No").getAttribute("aria-pressed")==="true")return false;
+  return null;
+}
+function setYesNo(id,v){
+  var y=$(id+"Yes"),n=$(id+"No"),isY=v===true,isN=v===false;
+  y.classList.toggle("on",isY);y.setAttribute("aria-pressed",isY?"true":"false");
+  n.classList.toggle("on",isN);n.setAttribute("aria-pressed",isN?"true":"false");
+}
+function toggleYesNo(id,val){
+  setYesNo(id,getYesNo(id)===val?null:val);
+  dirty=true;$("savedMsg").textContent="";
+}
 function setCheck(id,on){
   var b=$(id);
   b.classList.toggle("on",!!on);
@@ -403,6 +464,9 @@ function readForm(d){
   d.practiced=$("practiced").getAttribute("aria-pressed")==="true";
   d.practicedPoint=$("practicedPoint").value.trim();
   d.yaadMinutes=readYaadMinutes();
+  d.sleepPothamel=getYesNo("sleepPothamel");
+  d.sleepMeditation=getYesNo("sleepMeditation");
+  d.sleepNoPhone=getYesNo("sleepNoPhone");
   d.hourly=d.hourly||{};
   return d;
 }
@@ -421,6 +485,9 @@ function loadForm(){
   setCheck("practiced",d.practiced);
   $("practicedPoint").value=d.practicedPoint||"";
   setYaadInputs(d.yaadMinutes);
+  setYesNo("sleepPothamel",d.sleepPothamel);
+  setYesNo("sleepMeditation",d.sleepMeditation);
+  setYesNo("sleepNoPhone",d.sleepNoPhone);
   $("savedMsg").textContent=db.days[cur]&&(d.wake||d.minutes!=null||d.rating||(d.yaadMinutes&&d.yaadMinutes>0))?"Saved entry loaded":"";
   $("save").textContent=db.days[cur]&&hasMorning(d)?"Update chart":"Update chart";
   $("nextDay").disabled=cur>=today();
@@ -520,6 +587,11 @@ function renderStats(dates){
   dates.forEach(function(s){var d=db.days[s];if(!d)return;logged++;
     if(d.rating)rs.push(d.rating);if(d.minutes)mins+=d.minutes;pm+=pauseMinutes(d);if(onTime(s))early++;
     murli+=clampMurli(d.murli);if(d.churned)churned++;if(d.practiced)practiced++;yaad+=clampYaad(d.yaadMinutes)});
+  function sleepCount(field){var yes=0,answered=0;dates.forEach(function(s){var d=db.days[s];if(!d||d[field]==null)return;answered++;if(d[field]===true)yes++});return {yes:yes,answered:answered}};
+  var pot=sleepCount("sleepPothamel"),med=sleepCount("sleepMeditation"),ph=sleepCount("sleepNoPhone");
+  var potSt=currentFieldStreak("sleepPothamel"),potBest=bestFieldStreak("sleepPothamel");
+  var medSt=currentFieldStreak("sleepMeditation"),medBest=bestFieldStreak("sleepMeditation");
+  var phSt=currentFieldStreak("sleepNoPhone"),phBest=bestFieldStreak("sleepNoPhone");
   var avg=rs.length?(rs.reduce(function(a,b){return a+b},0)/rs.length).toFixed(1):"–";
   var murliAvg=logged?(murli/logged).toFixed(1):"–";
   var cs=currentStreak(),bs=bestStreak();
@@ -536,7 +608,10 @@ function renderStats(dates){
     [logged?fmtYaad(Math.round(yaad/logged)):"0m","Yaad daily average"],
     [String(murli),murliAvg==="–"?"Murli reads":"Murli reads (avg "+murliAvg+"/day)"],
     [churned+" / "+logged,"Churned · streak "+cSt+" (best "+cBest+")"],
-    [practiced+" / "+logged,"Practiced · streak "+pSt+" (best "+pBest+")"]
+    [practiced+" / "+logged,"Practiced · streak "+pSt+" (best "+pBest+")"],
+    [pot.yes+" / "+pot.answered,"Pothamel · streak "+potSt+" (best "+potBest+")"],
+    [med.yes+" / "+med.answered,"Meditation before sleep · streak "+medSt+" (best "+medBest+")"],
+    [ph.yes+" / "+ph.answered,"No phone · streak "+phSt+" (best "+phBest+")"]
   ];
   $("stats").innerHTML=items.map(function(i){return '<div class="stat"><div class="v">'+esc(i[0])+'</div><div class="k">'+esc(i[1])+'</div></div>'}).join("");
 }
@@ -609,6 +684,9 @@ function renderHistory(){
     if(d.churned)bits.push("Churned");
     if(d.practiced)bits.push("Practiced");
     if(clampYaad(d.yaadMinutes)>0)bits.push("Yaad "+fmtYaad(d.yaadMinutes));
+    if(d.sleepPothamel!=null)bits.push("Pothamel "+(d.sleepPothamel?"Yes":"No"));
+    if(d.sleepMeditation!=null)bits.push("Meditation before sleep "+(d.sleepMeditation?"Yes":"No"));
+    if(d.sleepNoPhone!=null)bits.push("No phone "+(d.sleepNoPhone?"Yes":"No"));
     bits.push(pausesDone(d)+"/17 pauses");
     var extra="";
     if(d.note)extra+='<div class="n">'+esc(d.note)+'</div>';
@@ -671,6 +749,7 @@ $("murliPlus").addEventListener("click",function(){if(curMurli>=MURLI_MAX)return
 function toggleCheck(id){var on=$(""+id).getAttribute("aria-pressed")!=="true";setCheck(id,on);dirty=true;$("savedMsg").textContent=""}
 $("churned").addEventListener("click",function(){toggleCheck("churned")});
 $("practiced").addEventListener("click",function(){toggleCheck("practiced")});
+$("sleepChecks").addEventListener("click",function(e){var b=e.target.closest("button[data-sleep]");if(!b)return;toggleYesNo(b.dataset.sleep,b.dataset.val==="yes")});
 $("save").addEventListener("click",saveForm);
 $("date").addEventListener("change",function(){var v=$("date").value;if(v)goDate(v)});
 $("prevDay").addEventListener("click",function(){goDate(addDays(cur,-1))});
