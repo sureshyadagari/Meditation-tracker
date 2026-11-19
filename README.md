@@ -6,6 +6,8 @@ Yaad ka chart records the day’s total remembrance time in hours and minutes, a
 
 Before sleep records three Yes/No checks: pothamel to Baba, at least 10 minutes of meditation, and no phone.
 
+“Did you wake up for Amritvela?” is a Yes/No gate: No hides wake-up time, minutes, and rating, and saves those as 0.
+
 Open it at [https://sureshyadagari.github.io/Meditation-tracker/](https://sureshyadagari.github.io/Meditation-tracker/). On a phone, use the browser’s Add to Home Screen so it opens full screen.
 
 Entries stay only in that phone’s browser storage. They are not saved on GitHub or any server. Use **Backup** and **Export** to download a JSON copy and keep that file somewhere safe. Clearing site data, or opening the app in another browser, starts empty unless you import that export.

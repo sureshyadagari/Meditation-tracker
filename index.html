@@ -106,6 +106,8 @@ nav button.on{color:var(--accent);font-weight:600}
 .sleep h2{margin-bottom:10px}
 .sleep-row{margin:0 0 12px}
 .sleep-row:last-child{margin-bottom:0}
+#amritvelaWokeRow{margin:0 0 14px}
+#amritvelaFields[hidden]{display:none!important}
 .sleep-q{font-size:.9rem;font-weight:500;margin:0 0 6px}
 .yn{display:flex;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:3px}
 .yn button{flex:1;border:0;background:transparent;min-height:42px}
@@ -146,14 +148,23 @@ main.ptr-snap{transition:transform .22s ease}
     </div>
     <div class="card">
       <h2>Amritvela</h2>
-      <div class="row">
-        <div class="field"><label for="wake">Woke up at (target 4:00)</label><input type="time" id="wake"></div>
-        <div class="field"><label for="mins">Amritvela minutes</label><input type="number" id="mins" inputmode="numeric" min="0" max="600" placeholder="0"></div>
+      <div class="sleep-row" id="amritvelaWokeRow">
+        <div class="sleep-q" id="amritvelaWokeLabel">Did you wake up for Amritvela?</div>
+        <div class="yn" role="group" aria-labelledby="amritvelaWokeLabel">
+          <button type="button" data-amrit="amritvelaWoke" data-val="yes" id="amritvelaWokeYes" aria-pressed="false">Yes</button>
+          <button type="button" data-amrit="amritvelaWoke" data-val="no" id="amritvelaWokeNo" aria-pressed="false">No</button>
+        </div>
       </div>
-      <div class="field">
-        <label>How effective did it feel?</label>
-        <div class="rating" id="rating" role="radiogroup" aria-label="Rating 1 to 5"></div>
-        <div class="hint" id="ratingHint" style="margin-top:6px">1 = scattered, 5 = deep and still</div>
+      <div id="amritvelaFields">
+        <div class="row">
+          <div class="field"><label for="wake">Woke up at (target 4:00)</label><input type="time" id="wake"></div>
+          <div class="field"><label for="mins">Amritvela minutes</label><input type="number" id="mins" inputmode="numeric" min="0" max="600" placeholder="0"></div>
+        </div>
+        <div class="field">
+          <label>How effective did it feel?</label>
+          <div class="rating" id="rating" role="radiogroup" aria-label="Rating 1 to 5"></div>
+          <div class="hint" id="ratingHint" style="margin-top:6px">1 = scattered, 5 = deep and still</div>
+        </div>
       </div>
       <div class="field">
         <label id="murliLabel">Murli (complete reads)</label>
@@ -317,7 +328,7 @@ function shortDate(s){var d=parseYmd(s);return d.getDate()+" "+MONTHS[d.getMonth
 /* ---------- storage ---------- */
 var db;
 function blank(){return {version:1,days:{}}}
-function blankDay(){return {wake:"",minutes:null,rating:null,note:"",hourly:{},murli:0,churned:false,churnedPoint:"",practiced:false,practicedPoint:"",yaadMinutes:0,sleepPothamel:null,sleepMeditation:null,sleepNoPhone:null}}
+function blankDay(){return {wake:"",minutes:null,rating:null,amritvelaWoke:null,note:"",hourly:{},murli:0,churned:false,churnedPoint:"",practiced:false,practicedPoint:"",yaadMinutes:0,sleepPothamel:null,sleepMeditation:null,sleepNoPhone:null}}
 function parseYesNo(v){
   if(v===true||v===false)return v;
   if(typeof v==="string"){
@@ -325,6 +336,18 @@ function parseYesNo(v){
     if(t==="true"||t==="yes")return true;
     if(t==="false"||t==="no")return false;
   }
+  return null;
+}
+function parseRating(v){
+  if(v===""||v==null||isNaN(+v))return null;
+  var r=Math.round(+v);
+  if(r===0||(r>=1&&r<=5))return r;
+  return null;
+}
+function deriveAmritvelaWoke(d){
+  var v=parseYesNo(d.amritvelaWoke);
+  if(v!==null)return v;
+  if(toMin(d.wake)!=null||(d.minutes!=null&&d.minutes!==""&&!isNaN(+d.minutes)))return true;
   return null;
 }
 function clampMurli(v){
@@ -366,6 +389,7 @@ function load(){
   if(raw){try{var o=JSON.parse(raw);if(o&&o.days&&typeof o.days==="object")return normalize(o)}catch(e){}}
   var fresh=blank();
   fresh.days["2026-11-18"]={wake:"04:00",minutes:20,rating:1,note:"",hourly:{}};
+  fresh=normalize(fresh);
   persist(fresh);
   return fresh;
 }
@@ -380,10 +404,13 @@ function normalize(o){
       if(v.status==="done")hr[hn]={status:"done",min:Math.max(1,Math.min(600,+v.min||1))};
       else if(v.status==="skipped")hr[hn]={status:"skipped"};
     });
-    var r=+d.rating;
-    out.days[k]={wake:toMin(d.wake)!=null?d.wake.slice(0,5):"",
-      minutes:d.minutes===""||d.minutes==null||isNaN(+d.minutes)?null:Math.max(0,+d.minutes),
-      rating:r>=1&&r<=5?Math.round(r):null,note:typeof d.note==="string"?d.note:"",hourly:hr,
+    var wake=toMin(d.wake)!=null?d.wake.slice(0,5):"";
+    var minutes=d.minutes===""||d.minutes==null||isNaN(+d.minutes)?null:Math.max(0,+d.minutes);
+    var rating=parseRating(d.rating);
+    var woke=deriveAmritvelaWoke({amritvelaWoke:d.amritvelaWoke,wake:wake,minutes:minutes});
+    if(woke===false){wake="";minutes=0;rating=0}
+    out.days[k]={wake:wake,minutes:minutes,rating:rating,amritvelaWoke:woke,
+      note:typeof d.note==="string"?d.note:"",hourly:hr,
       murli:clampMurli(d.murli),
       churned:!!d.churned,
       churnedPoint:typeof d.churnedPoint==="string"?d.churnedPoint:"",
@@ -401,7 +428,8 @@ function getDay(s){
   var d=db.days[s];
   if(!d)return blankDay();
   return {
-    wake:d.wake||"",minutes:d.minutes==null?null:d.minutes,rating:d.rating||null,
+    wake:d.wake||"",minutes:d.minutes==null?null:d.minutes,rating:parseRating(d.rating),
+    amritvelaWoke:deriveAmritvelaWoke(d),
     note:d.note||"",hourly:d.hourly||{},murli:clampMurli(d.murli),
     churned:!!d.churned,churnedPoint:typeof d.churnedPoint==="string"?d.churnedPoint:"",
     practiced:!!d.practiced,practicedPoint:typeof d.practicedPoint==="string"?d.practicedPoint:"",
@@ -412,7 +440,7 @@ function getDay(s){
   };
 }
 function hasMorning(d){
-  return !!(d.wake||d.minutes!=null||d.rating||d.note||(d.murli&&d.murli>0)||d.churned||d.churnedPoint||d.practiced||d.practicedPoint||(d.yaadMinutes&&d.yaadMinutes>0)||d.sleepPothamel!=null||d.sleepMeditation!=null||d.sleepNoPhone!=null);
+  return !!(d.wake||d.minutes!=null||d.rating!=null||d.amritvelaWoke!=null||d.note||(d.murli&&d.murli>0)||d.churned||d.churnedPoint||d.practiced||d.practicedPoint||(d.yaadMinutes&&d.yaadMinutes>0)||d.sleepPothamel!=null||d.sleepMeditation!=null||d.sleepNoPhone!=null);
 }
 function isEmptyDay(d){return !hasMorning(d)&&!Object.keys(d.hourly||{}).length}
 function putDay(s,d){if(isEmptyDay(d))delete db.days[s];else db.days[s]=d;persist()}
@@ -452,11 +480,23 @@ function setCheck(id,on){
   b.classList.toggle("on",!!on);
   b.setAttribute("aria-pressed",on?"true":"false");
 }
+function syncAmritvelaFields(){
+  var show=getYesNo("amritvelaWoke")!==false;
+  $("amritvelaFields").hidden=!show;
+}
 function readForm(d){
-  var m=$("mins").value.trim();
-  d.wake=$("wake").value||"";
-  d.minutes=m===""?null:Math.max(0,Math.min(600,Math.round(+m)||0));
-  d.rating=curRating;
+  var woke=getYesNo("amritvelaWoke");
+  d.amritvelaWoke=woke;
+  if(woke===false){
+    d.wake="";
+    d.minutes=0;
+    d.rating=0;
+  }else{
+    var m=$("mins").value.trim();
+    d.wake=$("wake").value||"";
+    d.minutes=m===""?null:Math.max(0,Math.min(600,Math.round(+m)||0));
+    d.rating=curRating;
+  }
   d.note=$("note").value.trim();
   d.murli=curMurli;
   d.churned=$("churned").getAttribute("aria-pressed")==="true";
@@ -473,10 +513,17 @@ function readForm(d){
 function loadForm(){
   var d=getDay(cur);
   $("date").value=cur;
-  $("wake").value=d.wake||"";
-  $("mins").value=d.minutes==null?"":d.minutes;
+  setYesNo("amritvelaWoke",d.amritvelaWoke);
+  if(d.amritvelaWoke===false){
+    $("wake").value="";
+    $("mins").value="";
+    curRating=null;
+  }else{
+    $("wake").value=d.wake||"";
+    $("mins").value=d.minutes==null?"":d.minutes;
+    curRating=d.rating>=1&&d.rating<=5?d.rating:null;
+  }
   $("note").value=d.note||"";
-  curRating=d.rating||null;
   curMurli=clampMurli(d.murli);
   renderRatingButtons();
   renderMurli();
@@ -488,7 +535,8 @@ function loadForm(){
   setYesNo("sleepPothamel",d.sleepPothamel);
   setYesNo("sleepMeditation",d.sleepMeditation);
   setYesNo("sleepNoPhone",d.sleepNoPhone);
-  $("savedMsg").textContent=db.days[cur]&&(d.wake||d.minutes!=null||d.rating||(d.yaadMinutes&&d.yaadMinutes>0))?"Saved entry loaded":"";
+  syncAmritvelaFields();
+  $("savedMsg").textContent=db.days[cur]&&(d.wake||d.minutes!=null||d.rating!=null||d.amritvelaWoke!=null||(d.yaadMinutes&&d.yaadMinutes>0))?"Saved entry loaded":"";
   $("save").textContent=db.days[cur]&&hasMorning(d)?"Update chart":"Update chart";
   $("nextDay").disabled=cur>=today();
   var t=today();
@@ -585,10 +633,11 @@ function bestFieldStreak(field){
 function renderStats(dates){
   var rs=[],mins=0,pm=0,early=0,logged=0,murli=0,churned=0,practiced=0,yaad=0;
   dates.forEach(function(s){var d=db.days[s];if(!d)return;logged++;
-    if(d.rating)rs.push(d.rating);if(d.minutes)mins+=d.minutes;pm+=pauseMinutes(d);if(onTime(s))early++;
+    if(d.rating!=null)rs.push(d.rating);if(d.minutes)mins+=d.minutes;pm+=pauseMinutes(d);if(onTime(s))early++;
     murli+=clampMurli(d.murli);if(d.churned)churned++;if(d.practiced)practiced++;yaad+=clampYaad(d.yaadMinutes)});
   function sleepCount(field){var yes=0,answered=0;dates.forEach(function(s){var d=db.days[s];if(!d||d[field]==null)return;answered++;if(d[field]===true)yes++});return {yes:yes,answered:answered}};
   var pot=sleepCount("sleepPothamel"),med=sleepCount("sleepMeditation"),ph=sleepCount("sleepNoPhone");
+  var woke=sleepCount("amritvelaWoke");
   var potSt=currentFieldStreak("sleepPothamel"),potBest=bestFieldStreak("sleepPothamel");
   var medSt=currentFieldStreak("sleepMeditation"),medBest=bestFieldStreak("sleepMeditation");
   var phSt=currentFieldStreak("sleepNoPhone"),phBest=bestFieldStreak("sleepNoPhone");
@@ -603,6 +652,7 @@ function renderStats(dates){
     [fmtHM(mins),"Amritvela meditation"],
     [fmtHM(pm),"Hourly pause time"],
     [early+" / "+logged,"Days up by 4:15"],
+    [woke.yes+" / "+woke.answered,"Amritvela days woke"],
     [logged+"","Days logged"],
     [fmtYaad(yaad),"Yaad total"],
     [logged?fmtYaad(Math.round(yaad/logged)):"0m","Yaad daily average"],
@@ -677,9 +727,12 @@ function renderHistory(){
   var keys=sortedKeys().reverse(),ul=$("hist");
   if(!keys.length){ul.innerHTML='<li><div class="empty" style="width:100%">No entries yet</div></li>';return}
   ul.innerHTML=keys.map(function(k){var d=db.days[k],bits=[];
-    if(d.wake)bits.push("Woke "+fmtTime(toMin(d.wake)));
-    if(d.minutes!=null)bits.push(d.minutes+" min Amritvela");
-    if(d.rating)bits.push(d.rating+"/5");
+    if(d.amritvelaWoke===false){bits.push("Missed Amritvela")}
+    else{
+      if(d.wake)bits.push("Woke "+fmtTime(toMin(d.wake)));
+      if(d.minutes!=null)bits.push(d.minutes+" min Amritvela");
+      if(d.rating)bits.push(d.rating+"/5");
+    }
     if(clampMurli(d.murli)>0)bits.push("Murli ×"+clampMurli(d.murli));
     if(d.churned)bits.push("Churned");
     if(d.practiced)bits.push("Practiced");
@@ -749,6 +802,7 @@ $("murliPlus").addEventListener("click",function(){if(curMurli>=MURLI_MAX)return
 function toggleCheck(id){var on=$(""+id).getAttribute("aria-pressed")!=="true";setCheck(id,on);dirty=true;$("savedMsg").textContent=""}
 $("churned").addEventListener("click",function(){toggleCheck("churned")});
 $("practiced").addEventListener("click",function(){toggleCheck("practiced")});
+$("amritvelaWokeRow").addEventListener("click",function(e){var b=e.target.closest("button[data-amrit]");if(!b)return;toggleYesNo("amritvelaWoke",b.dataset.val==="yes");syncAmritvelaFields()});
 $("sleepChecks").addEventListener("click",function(e){var b=e.target.closest("button[data-sleep]");if(!b)return;toggleYesNo(b.dataset.sleep,b.dataset.val==="yes")});
 $("save").addEventListener("click",saveForm);
 $("date").addEventListener("change",function(){var v=$("date").value;if(v)goDate(v)});
