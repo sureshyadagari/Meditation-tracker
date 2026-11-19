@@ -107,6 +107,7 @@ nav button.on{color:var(--accent);font-weight:600}
 .sleep-row{margin:0 0 12px}
 .sleep-row:last-child{margin-bottom:0}
 #amritvelaWokeRow{margin:0 0 14px}
+#pointDoneRow{margin:0 0 14px}
 #amritvelaFields[hidden]{display:none!important}
 .sleep-q{font-size:.9rem;font-weight:500;margin:0 0 6px}
 .yn{display:flex;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:3px}
@@ -174,13 +175,12 @@ main.ptr-snap{transition:transform .22s ease}
           <button type="button" id="murliPlus" aria-label="More Murli reads">+</button>
         </div>
       </div>
-      <div class="checkpoint">
-        <button type="button" class="check" id="churned" aria-pressed="false"><span class="box" aria-hidden="true"></span>Churned a point</button>
-        <input type="text" id="churnedPoint" maxlength="200" placeholder="The point (optional)" aria-label="Churned point">
-      </div>
-      <div class="checkpoint">
-        <button type="button" class="check" id="practiced" aria-pressed="false"><span class="box" aria-hidden="true"></span>Practiced a point</button>
-        <input type="text" id="practicedPoint" maxlength="200" placeholder="The point (optional)" aria-label="Practiced point">
+      <div class="sleep-row" id="pointDoneRow">
+        <div class="sleep-q" id="pointDoneLabel">Did you churn or practice a point?</div>
+        <div class="yn" role="group" aria-labelledby="pointDoneLabel">
+          <button type="button" data-point="pointDone" data-val="yes" id="pointDoneYes" aria-pressed="false">Yes</button>
+          <button type="button" data-point="pointDone" data-val="no" id="pointDoneNo" aria-pressed="false">No</button>
+        </div>
       </div>
       <div class="yaad">
         <h2>Yaad ka chart</h2>
@@ -310,7 +310,14 @@ function shortDate(s){var d=parseYmd(s);return d.getDate()+" "+MONTHS[d.getMonth
 /* ---------- storage ---------- */
 var db;
 function blank(){return {version:1,days:{}}}
-function blankDay(){return {wake:"",minutes:null,rating:null,amritvelaWoke:null,note:"",hourly:{},traffic:{},murli:0,churned:false,churnedPoint:"",practiced:false,practicedPoint:"",yaadMinutes:0,sleepPothamel:null,sleepMeditation:null,sleepNoPhone:null}}
+function blankDay(){return {wake:"",minutes:null,rating:null,amritvelaWoke:null,note:"",hourly:{},traffic:{},murli:0,churned:false,churnedPoint:"",practiced:false,practicedPoint:"",pointDone:null,yaadMinutes:0,sleepPothamel:null,sleepMeditation:null,sleepNoPhone:null}}
+function derivePointDone(d){
+  if(!d)return null;
+  var v=parseYesNo(d.pointDone);
+  if(v!==null)return v;
+  if(d.churned||d.practiced)return true;
+  return null;
+}
 function normalizeTraffic(t){
   var out={};
   if(!t||typeof t!=="object")return out;
@@ -413,6 +420,7 @@ function normalize(o){
       churnedPoint:typeof d.churnedPoint==="string"?d.churnedPoint:"",
       practiced:!!d.practiced,
       practicedPoint:typeof d.practicedPoint==="string"?d.practicedPoint:"",
+      pointDone:derivePointDone(d),
       yaadMinutes:clampYaad(d.yaadMinutes),
       sleepPothamel:parseYesNo(d.sleepPothamel),
       sleepMeditation:parseYesNo(d.sleepMeditation),
@@ -431,6 +439,7 @@ function getDay(s){
     note:d.note||"",hourly:d.hourly||{},murli:clampMurli(d.murli),
     churned:!!d.churned,churnedPoint:typeof d.churnedPoint==="string"?d.churnedPoint:"",
     practiced:!!d.practiced,practicedPoint:typeof d.practicedPoint==="string"?d.practicedPoint:"",
+    pointDone:derivePointDone(d),
     yaadMinutes:clampYaad(d.yaadMinutes),
     sleepPothamel:parseYesNo(d.sleepPothamel),
     sleepMeditation:parseYesNo(d.sleepMeditation),
@@ -439,7 +448,7 @@ function getDay(s){
   };
 }
 function hasMorning(d){
-  return !!(d.wake||d.minutes!=null||d.rating!=null||d.amritvelaWoke!=null||d.note||(d.murli&&d.murli>0)||d.churned||d.churnedPoint||d.practiced||d.practicedPoint||(d.yaadMinutes&&d.yaadMinutes>0)||d.sleepPothamel!=null||d.sleepMeditation!=null||d.sleepNoPhone!=null);
+  return !!(d.wake||d.minutes!=null||d.rating!=null||d.amritvelaWoke!=null||d.note||(d.murli&&d.murli>0)||d.churned||d.churnedPoint||d.practiced||d.practicedPoint||d.pointDone!=null||(d.yaadMinutes&&d.yaadMinutes>0)||d.sleepPothamel!=null||d.sleepMeditation!=null||d.sleepNoPhone!=null);
 }
 function isEmptyDay(d){return !hasMorning(d)&&!Object.keys(d.hourly||{}).length&&trafficDone(d)===0}
 function putDay(s,d){if(isEmptyDay(d))delete db.days[s];else db.days[s]=d;persist()}
@@ -474,11 +483,6 @@ function toggleYesNo(id,val){
   setYesNo(id,getYesNo(id)===val?null:val);
   dirty=true;$("savedMsg").textContent="";
 }
-function setCheck(id,on){
-  var b=$(id);
-  b.classList.toggle("on",!!on);
-  b.setAttribute("aria-pressed",on?"true":"false");
-}
 function syncAmritvelaFields(){
   var show=getYesNo("amritvelaWoke")!==false;
   $("amritvelaFields").hidden=!show;
@@ -498,10 +502,11 @@ function readForm(d){
   }
   d.note=$("note").value.trim();
   d.murli=curMurli;
-  d.churned=$("churned").getAttribute("aria-pressed")==="true";
-  d.churnedPoint=$("churnedPoint").value.trim();
-  d.practiced=$("practiced").getAttribute("aria-pressed")==="true";
-  d.practicedPoint=$("practicedPoint").value.trim();
+  d.pointDone=getYesNo("pointDone");
+  d.churned=!!d.churned;
+  d.churnedPoint=typeof d.churnedPoint==="string"?d.churnedPoint:"";
+  d.practiced=!!d.practiced;
+  d.practicedPoint=typeof d.practicedPoint==="string"?d.practicedPoint:"";
   d.yaadMinutes=readYaadMinutes();
   d.sleepPothamel=getYesNo("sleepPothamel");
   d.sleepMeditation=getYesNo("sleepMeditation");
@@ -527,10 +532,7 @@ function loadForm(){
   curMurli=clampMurli(d.murli);
   renderRatingButtons();
   renderMurli();
-  setCheck("churned",d.churned);
-  $("churnedPoint").value=d.churnedPoint||"";
-  setCheck("practiced",d.practiced);
-  $("practicedPoint").value=d.practicedPoint||"";
+  setYesNo("pointDone",derivePointDone(d));
   setYaadInputs(d.yaadMinutes);
   setYesNo("sleepPothamel",d.sleepPothamel);
   setYesNo("sleepMeditation",d.sleepMeditation);
@@ -614,6 +616,20 @@ function bestStreak(){
   return best;
 }
 function hasCheckDay(s,field){var d=db.days[s];return !!(d&&d[field])}
+function hasPointDay(s){return derivePointDone(db.days[s])===true}
+function currentPointStreak(){
+  var t=today(),s=hasPointDay(t)?t:addDays(t,-1),n=0,g=0;
+  while(hasPointDay(s)&&g++<5000){n++;s=addDays(s,-1)}
+  return n;
+}
+function bestPointStreak(){
+  var keys=sortedKeys(),best=0,run=0,prev=null;
+  keys.forEach(function(k){
+    if(hasPointDay(k)){run=(prev&&addDays(prev,1)===k&&hasPointDay(prev))?run+1:1;best=Math.max(best,run)}else run=0;
+    prev=k;
+  });
+  return best;
+}
 function currentFieldStreak(field){
   var t=today(),s=hasCheckDay(t,field)?t:addDays(t,-1),n=0,g=0;
   while(hasCheckDay(s,field)&&g++<5000){n++;s=addDays(s,-1)}
@@ -642,21 +658,22 @@ function bestTrafficStreak(){
   return best;
 }
 function renderStats(dates){
-  var rs=[],mins=0,tc=0,early=0,logged=0,murli=0,churned=0,practiced=0,yaad=0;
+  var rs=[],mins=0,tc=0,early=0,logged=0,murli=0,yaad=0;
   dates.forEach(function(s){var d=db.days[s];if(!d)return;logged++;
     if(d.rating!=null)rs.push(d.rating);if(d.minutes)mins+=d.minutes;tc+=trafficDone(d);if(onTime(s))early++;
-    murli+=clampMurli(d.murli);if(d.churned)churned++;if(d.practiced)practiced++;yaad+=clampYaad(d.yaadMinutes)});
+    murli+=clampMurli(d.murli);yaad+=clampYaad(d.yaadMinutes)});
   function sleepCount(field){var yes=0,answered=0;dates.forEach(function(s){var d=db.days[s];if(!d||d[field]==null)return;answered++;if(d[field]===true)yes++});return {yes:yes,answered:answered}};
   var pot=sleepCount("sleepPothamel"),med=sleepCount("sleepMeditation"),ph=sleepCount("sleepNoPhone");
   var woke=sleepCount("amritvelaWoke");
+  var ptYes=0,ptAnswered=0;
+  dates.forEach(function(s){var v=derivePointDone(db.days[s]);if(v==null)return;ptAnswered++;if(v===true)ptYes++});
   var potSt=currentFieldStreak("sleepPothamel"),potBest=bestFieldStreak("sleepPothamel");
   var medSt=currentFieldStreak("sleepMeditation"),medBest=bestFieldStreak("sleepMeditation");
   var phSt=currentFieldStreak("sleepNoPhone"),phBest=bestFieldStreak("sleepNoPhone");
   var avg=rs.length?(rs.reduce(function(a,b){return a+b},0)/rs.length).toFixed(1):"–";
   var murliAvg=logged?(murli/logged).toFixed(1):"–";
   var cs=currentStreak(),bs=bestStreak();
-  var cSt=currentFieldStreak("churned"),cBest=bestFieldStreak("churned");
-  var pSt=currentFieldStreak("practiced"),pBest=bestFieldStreak("practiced");
+  var ptSt=currentPointStreak(),ptBest=bestPointStreak();
   var tcSt=currentTrafficStreak(),tcBest=bestTrafficStreak();
   var tcAvg=logged?(tc/logged).toFixed(1):"0";
   var items=[
@@ -672,8 +689,7 @@ function renderStats(dates){
     [fmtYaad(yaad),"Yaad total"],
     [logged?fmtYaad(Math.round(yaad/logged)):"0m","Yaad daily average"],
     [String(murli),murliAvg==="–"?"Murli reads":"Murli reads (avg "+murliAvg+"/day)"],
-    [churned+" / "+logged,"Churned · streak "+cSt+" (best "+cBest+")"],
-    [practiced+" / "+logged,"Practiced · streak "+pSt+" (best "+pBest+")"],
+    [ptYes+" / "+ptAnswered,"Churned or practiced a point · streak "+ptSt+" (best "+ptBest+")"],
     [pot.yes+" / "+pot.answered,"Pothamel · streak "+potSt+" (best "+potBest+")"],
     [med.yes+" / "+med.answered,"Meditation before sleep · streak "+medSt+" (best "+medBest+")"],
     [ph.yes+" / "+ph.answered,"No phone · streak "+phSt+" (best "+phBest+")"]
@@ -749,8 +765,8 @@ function renderHistory(){
       if(d.rating)bits.push(d.rating+"/5");
     }
     if(clampMurli(d.murli)>0)bits.push("Murli ×"+clampMurli(d.murli));
-    if(d.churned)bits.push("Churned");
-    if(d.practiced)bits.push("Practiced");
+    var pt=derivePointDone(d);
+    if(pt!=null)bits.push("Churned or practiced "+(pt?"Yes":"No"));
     if(clampYaad(d.yaadMinutes)>0)bits.push("Yaad "+fmtYaad(d.yaadMinutes));
     if(d.sleepPothamel!=null)bits.push("Pothamel "+(d.sleepPothamel?"Yes":"No"));
     if(d.sleepMeditation!=null)bits.push("Meditation before sleep "+(d.sleepMeditation?"Yes":"No"));
@@ -759,8 +775,6 @@ function renderHistory(){
     var extra="";
     if(d.note)extra+='<div class="n">'+esc(d.note)+'</div>';
     else extra+='<div class="m" style="font-style:italic">No note</div>';
-    if(d.churned&&d.churnedPoint)extra+='<div class="n">Churned: '+esc(d.churnedPoint)+'</div>';
-    if(d.practiced&&d.practicedPoint)extra+='<div class="n">Practiced: '+esc(d.practicedPoint)+'</div>';
     return '<li><div class="body"><div class="d">'+esc(niceDate(k))+'</div><div class="m">'+esc(bits.join(" · "))+'</div>'+extra+
       '</div><button data-edit="'+k+'">Edit</button></li>'}).join("");
 }
@@ -811,13 +825,11 @@ function makeIcons(){
 db=load();
 makeIcons();
 $("rating").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;var r=+b.dataset.r;curRating=curRating===r?null:r;dirty=true;renderRatingButtons();$("savedMsg").textContent=""});
-["wake","mins","note","churnedPoint","practicedPoint","yaadH","yaadM"].forEach(function(id){$(id).addEventListener("input",function(){dirty=true;$("savedMsg").textContent="";if(id==="yaadH"||id==="yaadM")renderYaadHint()})});
+["wake","mins","note","yaadH","yaadM"].forEach(function(id){$(id).addEventListener("input",function(){dirty=true;$("savedMsg").textContent="";if(id==="yaadH"||id==="yaadM")renderYaadHint()})});
 $("murliMinus").addEventListener("click",function(){if(curMurli<=0)return;curMurli--;dirty=true;renderMurli();$("savedMsg").textContent=""});
 $("murliPlus").addEventListener("click",function(){if(curMurli>=MURLI_MAX)return;curMurli++;dirty=true;renderMurli();$("savedMsg").textContent=""});
-function toggleCheck(id){var on=$(""+id).getAttribute("aria-pressed")!=="true";setCheck(id,on);dirty=true;$("savedMsg").textContent=""}
-$("churned").addEventListener("click",function(){toggleCheck("churned")});
-$("practiced").addEventListener("click",function(){toggleCheck("practiced")});
 $("amritvelaWokeRow").addEventListener("click",function(e){var b=e.target.closest("button[data-amrit]");if(!b)return;toggleYesNo("amritvelaWoke",b.dataset.val==="yes");syncAmritvelaFields()});
+$("pointDoneRow").addEventListener("click",function(e){var b=e.target.closest("button[data-point]");if(!b)return;toggleYesNo("pointDone",b.dataset.val==="yes")});
 $("sleepChecks").addEventListener("click",function(e){var b=e.target.closest("button[data-sleep]");if(!b)return;toggleYesNo(b.dataset.sleep,b.dataset.val==="yes")});
 $("save").addEventListener("click",saveForm);
 $("date").addEventListener("change",function(){var v=$("date").value;if(v)goDate(v)});
