@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Meditation Tracker</title>
-<meta name="description" content="Track Amritvela meditation, Murli reads, 4 AM wake-ups and hourly pauses. Works offline.">
+<meta name="description" content="Track Amritvela meditation, Murli reads, 3:30 AM wake-ups and traffic control. Works offline.">
 <meta name="theme-color" content="#f6f4ef" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#16181c" media="(prefers-color-scheme: dark)">
 <meta name="color-scheme" content="light dark">
@@ -140,7 +140,7 @@ main.ptr-snap{transition:transform .22s ease}
 <main>
   <section class="view on" id="v-today">
     <h1>Meditation Tracker</h1>
-    <p class="sub" id="greeting">Amritvela, Murli and hourly pauses</p>
+    <p class="sub" id="greeting">Amritvela, Murli and traffic control</p>
     <div class="datebar">
       <button class="ghost" id="prevDay" aria-label="Previous day">&#8249;</button>
       <input type="date" id="date" aria-label="Date">
@@ -157,7 +157,7 @@ main.ptr-snap{transition:transform .22s ease}
       </div>
       <div id="amritvelaFields">
         <div class="row">
-          <div class="field"><label for="wake">Woke up at (target 4:00)</label><input type="time" id="wake"></div>
+          <div class="field"><label for="wake">Woke up at (target 3:30)</label><input type="time" id="wake"></div>
           <div class="field"><label for="mins">Amritvela minutes</label><input type="number" id="mins" inputmode="numeric" min="0" max="600" placeholder="0"></div>
         </div>
         <div class="field">
@@ -220,26 +220,27 @@ main.ptr-snap{transition:transform .22s ease}
       <div class="saved" id="savedMsg" aria-live="polite"></div>
     </div>
     <div class="card">
-      <h2>Hourly pauses <span class="hint" id="pauseCount"></span></h2>
+      <h2>Traffic control <span class="hint" id="trafficCount"></span></h2>
+      <p class="sub">3 minutes of silence, stop the traffic of thoughts and remember Baba</p>
       <div class="grid" id="grid"></div>
-      <p class="hint" style="margin:10px 0 0">Tap an hour to mark a pause done or skipped.</p>
+      <p class="hint" style="margin:10px 0 0">Tap a time to mark it done.</p>
     </div>
   </section>
 
   <section class="view" id="v-progress">
     <h1>Progress</h1>
-    <p class="sub">Streak counts days woken by 4:15 AM.</p>
+    <p class="sub">Streak counts days woken by 3:30 AM.</p>
     <div class="seg" id="range">
       <button data-r="7" class="on">7 days</button><button data-r="30">30 days</button><button data-r="all">All time</button>
     </div>
     <div class="stats" id="stats"></div>
     <div class="card"><h2>Wake-up time</h2><div id="cWake"></div>
-      <div class="legend"><span><i style="background:var(--accent)"></i>By 4:15</span><span><i style="background:var(--warn)"></i>Later</span><span><i style="background:var(--muted);height:2px"></i>4:00 target</span></div></div>
+      <div class="legend"><span><i style="background:var(--accent)"></i>By 3:30</span><span><i style="background:var(--warn)"></i>Later</span><span><i style="background:var(--muted);height:2px"></i>3:30 target</span></div></div>
     <div class="card"><h2>Amritvela minutes</h2><div id="cMins"></div></div>
     <div class="card"><h2>Yaad ka chart</h2><div id="cYaad"></div></div>
     <div class="card"><h2>Rating</h2><div id="cRating"></div></div>
     <div class="card"><h2>Murli reads</h2><div id="cMurli"></div></div>
-    <div class="card"><h2>Hourly pauses done (of 17)</h2><div id="cPauses"></div></div>
+    <div class="card"><h2>Traffic control done (of 7)</h2><div id="cTraffic"></div></div>
   </section>
 
   <section class="view" id="v-history">
@@ -273,24 +274,6 @@ main.ptr-snap{transition:transform .22s ease}
   <button data-v="data">Backup</button>
 </nav>
 
-<div class="sheet-bg" id="sheetBg">
-  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
-    <h2 id="sheetTitle">Pause</h2>
-    <label>Done, minutes</label>
-    <div class="chips" id="minChips">
-      <button data-m="1">1</button><button data-m="2">2</button><button data-m="5">5</button>
-    </div>
-    <div class="row" style="margin:0 0 12px">
-      <input type="number" id="customMin" inputmode="numeric" min="1" max="120" placeholder="Other minutes">
-      <button id="customOk" style="flex:none">Done</button>
-    </div>
-    <div class="row">
-      <button id="skipBtn">Skipped</button>
-      <button id="clearBtn">Clear</button>
-      <button id="closeBtn" class="ghost">Cancel</button>
-    </div>
-  </div>
-</div>
 
 <script>
 (function(){
@@ -306,8 +289,8 @@ try{
 }catch(e){}
 
 var KEY="meditationTracker.v1";
-var HOURS=[];for(var h=5;h<=21;h++)HOURS.push(h);
-var STREAK_LIMIT=4*60+15;
+var TRAFFIC=["05:45","07:00","10:30","12:30","17:30","19:30","21:30"];
+var STREAK_LIMIT=3*60+30;
 var MURLI_MAX=20;
 var YAAD_MAX=24*60;
 var $=function(id){return document.getElementById(id)};
@@ -319,7 +302,6 @@ function addDays(s,n){var d=parseYmd(s);d.setDate(d.getDate()+n);return ymd(d)}
 function today(){return ymd(new Date())}
 function toMin(t){if(!t||!/^\d{1,2}:\d{2}/.test(t))return null;var p=t.split(":");return +p[0]*60+ +p[1]}
 function fmtTime(m){if(m==null)return"–";var h=Math.floor(m/60),mm=m%60,ap=h>=12?"PM":"AM",hh=h%12||12;return hh+":"+pad(mm)+" "+ap}
-function hourLabel(h){var ap=h>=12?"PM":"AM";return (h%12||12)+" "+ap}
 var MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 var WD=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 function niceDate(s){var d=parseYmd(s);return WD[d.getDay()]+", "+d.getDate()+" "+MONTHS[d.getMonth()]+" "+d.getFullYear()}
@@ -328,7 +310,22 @@ function shortDate(s){var d=parseYmd(s);return d.getDate()+" "+MONTHS[d.getMonth
 /* ---------- storage ---------- */
 var db;
 function blank(){return {version:1,days:{}}}
-function blankDay(){return {wake:"",minutes:null,rating:null,amritvelaWoke:null,note:"",hourly:{},murli:0,churned:false,churnedPoint:"",practiced:false,practicedPoint:"",yaadMinutes:0,sleepPothamel:null,sleepMeditation:null,sleepNoPhone:null}}
+function blankDay(){return {wake:"",minutes:null,rating:null,amritvelaWoke:null,note:"",hourly:{},traffic:{},murli:0,churned:false,churnedPoint:"",practiced:false,practicedPoint:"",yaadMinutes:0,sleepPothamel:null,sleepMeditation:null,sleepNoPhone:null}}
+function normalizeTraffic(t){
+  var out={};
+  if(!t||typeof t!=="object")return out;
+  TRAFFIC.forEach(function(k){
+    var v=t[k];
+    if(v==null){
+      var alt=k.replace(/^0/,"");
+      if(alt!==k)v=t[alt];
+    }
+    if(v===true||v==="true"||v==="yes")out[k]=true;
+  });
+  return out;
+}
+function trafficDone(d){var n=0,t=(d&&d.traffic)||{};TRAFFIC.forEach(function(k){if(t[k]===true)n++});return n}
+function cloneTraffic(t){return normalizeTraffic(t)}
 function parseYesNo(v){
   if(v===true||v===false)return v;
   if(typeof v==="string"){
@@ -419,7 +416,8 @@ function normalize(o){
       yaadMinutes:clampYaad(d.yaadMinutes),
       sleepPothamel:parseYesNo(d.sleepPothamel),
       sleepMeditation:parseYesNo(d.sleepMeditation),
-      sleepNoPhone:parseYesNo(d.sleepNoPhone)};
+      sleepNoPhone:parseYesNo(d.sleepNoPhone),
+      traffic:normalizeTraffic(d.traffic)};
   });
   return out;
 }
@@ -436,17 +434,18 @@ function getDay(s){
     yaadMinutes:clampYaad(d.yaadMinutes),
     sleepPothamel:parseYesNo(d.sleepPothamel),
     sleepMeditation:parseYesNo(d.sleepMeditation),
-    sleepNoPhone:parseYesNo(d.sleepNoPhone)
+    sleepNoPhone:parseYesNo(d.sleepNoPhone),
+    traffic:normalizeTraffic(d.traffic)
   };
 }
 function hasMorning(d){
   return !!(d.wake||d.minutes!=null||d.rating!=null||d.amritvelaWoke!=null||d.note||(d.murli&&d.murli>0)||d.churned||d.churnedPoint||d.practiced||d.practicedPoint||(d.yaadMinutes&&d.yaadMinutes>0)||d.sleepPothamel!=null||d.sleepMeditation!=null||d.sleepNoPhone!=null);
 }
-function isEmptyDay(d){return !hasMorning(d)&&!Object.keys(d.hourly||{}).length}
+function isEmptyDay(d){return !hasMorning(d)&&!Object.keys(d.hourly||{}).length&&trafficDone(d)===0}
 function putDay(s,d){if(isEmptyDay(d))delete db.days[s];else db.days[s]=d;persist()}
 
 /* ---------- today view ---------- */
-var cur=today(),curRating=null,curMurli=0,dirty=false;
+var cur=today(),curRating=null,curMurli=0,curTraffic={},dirty=false;
 function renderRatingButtons(){
   var w=$("rating");w.innerHTML="";
   for(var i=1;i<=5;i++){
@@ -508,6 +507,7 @@ function readForm(d){
   d.sleepMeditation=getYesNo("sleepMeditation");
   d.sleepNoPhone=getYesNo("sleepNoPhone");
   d.hourly=d.hourly||{};
+  d.traffic=cloneTraffic(curTraffic);
   return d;
 }
 function loadForm(){
@@ -535,6 +535,7 @@ function loadForm(){
   setYesNo("sleepPothamel",d.sleepPothamel);
   setYesNo("sleepMeditation",d.sleepMeditation);
   setYesNo("sleepNoPhone",d.sleepNoPhone);
+  curTraffic=cloneTraffic(d.traffic);
   syncAmritvelaFields();
   $("savedMsg").textContent=db.days[cur]&&(d.wake||d.minutes!=null||d.rating!=null||d.amritvelaWoke!=null||(d.yaadMinutes&&d.yaadMinutes>0))?"Saved entry loaded":"";
   $("save").textContent=db.days[cur]&&hasMorning(d)?"Update chart":"Update chart";
@@ -553,40 +554,38 @@ function saveForm(){
   $("save").textContent="Update chart";
   refreshOthers();
 }
+function trafficNowKey(){
+  var now=new Date(),m=now.getHours()*60+now.getMinutes(),i,tm,next;
+  for(i=0;i<TRAFFIC.length;i++){
+    tm=toMin(TRAFFIC[i]);
+    next=i<TRAFFIC.length-1?toMin(TRAFFIC[i+1]):24*60;
+    if(m>=tm&&m<next)return TRAFFIC[i];
+  }
+  return null;
+}
 function renderGrid(){
-  var d=getDay(cur),g=$("grid");g.innerHTML="";
-  var now=new Date(),isToday=cur===today(),done=0;
-  HOURS.forEach(function(h){
-    var v=d.hourly[h],b=document.createElement("button");
-    b.type="button";b.className="slot";b.dataset.h=h;
-    var st="Tap to log";
-    if(v&&v.status==="done"){b.className+=" done";st=v.min+" min";done++}
-    else if(v&&v.status==="skipped"){b.className+=" skipped";st="Skipped"}
-    if(isToday&&now.getHours()===h)b.className+=" now";
-    b.innerHTML='<span class="t">'+hourLabel(h)+'</span><span class="s">'+st+'</span>';
-    b.setAttribute("aria-label",hourLabel(h)+", "+st);
+  var g=$("grid");g.innerHTML="";
+  var isToday=cur===today(),done=0,nowKey=isToday?trafficNowKey():null;
+  var t=curTraffic||{};
+  TRAFFIC.forEach(function(k){
+    var on=t[k]===true,b=document.createElement("button");
+    b.type="button";b.className="slot"+(on?" done":"");b.dataset.k=k;
+    var st=on?"Done":"Tap";
+    if(on)done++;
+    if(nowKey===k)b.className+=" now";
+    b.innerHTML='<span class="t">'+fmtTime(toMin(k))+'</span><span class="s">'+st+'</span>';
+    b.setAttribute("aria-label",fmtTime(toMin(k))+", "+st);
+    b.setAttribute("aria-pressed",on?"true":"false");
     g.appendChild(b);
   });
-  $("pauseCount").textContent="· "+done+" of 17 done";
+  $("trafficCount").textContent="· "+done+" of 7 done";
 }
-var sheetHour=null;
-function openSheet(h){
-  sheetHour=h;var v=getDay(cur).hourly[h];
-  $("sheetTitle").textContent=hourLabel(h)+" pause";
-  Array.prototype.forEach.call($("minChips").children,function(c){
-    c.className=v&&v.status==="done"&&+c.dataset.m===v.min?"on":"";
-  });
-  $("customMin").value=v&&v.status==="done"&&[1,2,5].indexOf(v.min)<0?v.min:"";
-  $("sheetBg").classList.add("on");
-}
-function closeSheet(){$("sheetBg").classList.remove("on");sheetHour=null}
-function setSlot(val){
-  if(sheetHour==null)return;
-  var d=getDay(cur);d.hourly=d.hourly||{};
-  // keep any unsaved morning edits in the day object too
-  if(dirty){readForm(d);dirty=false;$("savedMsg").textContent="Saved"}
-  if(val==null)delete d.hourly[sheetHour];else d.hourly[sheetHour]=val;
-  putDay(cur,d);closeSheet();renderGrid();refreshOthers();
+function toggleTraffic(k){
+  if(TRAFFIC.indexOf(k)<0)return;
+  curTraffic=cloneTraffic(curTraffic);
+  if(curTraffic[k])delete curTraffic[k];else curTraffic[k]=true;
+  dirty=true;$("savedMsg").textContent="";
+  renderGrid();
 }
 
 /* ---------- progress ---------- */
@@ -600,8 +599,6 @@ function rangeDates(){
   while(s<=end&&guard++<4000){out.push(s);s=addDays(s,1)}
   return out;
 }
-function pausesDone(d){var n=0;Object.keys(d.hourly||{}).forEach(function(h){if(d.hourly[h].status==="done")n++});return n}
-function pauseMinutes(d){var n=0;Object.keys(d.hourly||{}).forEach(function(h){if(d.hourly[h].status==="done")n+=d.hourly[h].min});return n}
 function onTime(s){var d=db.days[s];var m=d&&toMin(d.wake);return m!=null&&m<=STREAK_LIMIT}
 function currentStreak(){
   var t=today(),s=onTime(t)?t:addDays(t,-1),n=0,g=0;
@@ -630,10 +627,24 @@ function bestFieldStreak(field){
   });
   return best;
 }
+function hasTrafficDay(s){return trafficDone(db.days[s])>0}
+function currentTrafficStreak(){
+  var t=today(),s=hasTrafficDay(t)?t:addDays(t,-1),n=0,g=0;
+  while(hasTrafficDay(s)&&g++<5000){n++;s=addDays(s,-1)}
+  return n;
+}
+function bestTrafficStreak(){
+  var keys=sortedKeys(),best=0,run=0,prev=null;
+  keys.forEach(function(k){
+    if(hasTrafficDay(k)){run=(prev&&addDays(prev,1)===k&&hasTrafficDay(prev))?run+1:1;best=Math.max(best,run)}else run=0;
+    prev=k;
+  });
+  return best;
+}
 function renderStats(dates){
-  var rs=[],mins=0,pm=0,early=0,logged=0,murli=0,churned=0,practiced=0,yaad=0;
+  var rs=[],mins=0,tc=0,early=0,logged=0,murli=0,churned=0,practiced=0,yaad=0;
   dates.forEach(function(s){var d=db.days[s];if(!d)return;logged++;
-    if(d.rating!=null)rs.push(d.rating);if(d.minutes)mins+=d.minutes;pm+=pauseMinutes(d);if(onTime(s))early++;
+    if(d.rating!=null)rs.push(d.rating);if(d.minutes)mins+=d.minutes;tc+=trafficDone(d);if(onTime(s))early++;
     murli+=clampMurli(d.murli);if(d.churned)churned++;if(d.practiced)practiced++;yaad+=clampYaad(d.yaadMinutes)});
   function sleepCount(field){var yes=0,answered=0;dates.forEach(function(s){var d=db.days[s];if(!d||d[field]==null)return;answered++;if(d[field]===true)yes++});return {yes:yes,answered:answered}};
   var pot=sleepCount("sleepPothamel"),med=sleepCount("sleepMeditation"),ph=sleepCount("sleepNoPhone");
@@ -646,12 +657,16 @@ function renderStats(dates){
   var cs=currentStreak(),bs=bestStreak();
   var cSt=currentFieldStreak("churned"),cBest=bestFieldStreak("churned");
   var pSt=currentFieldStreak("practiced"),pBest=bestFieldStreak("practiced");
+  var tcSt=currentTrafficStreak(),tcBest=bestTrafficStreak();
+  var tcAvg=logged?(tc/logged).toFixed(1):"0";
   var items=[
-    [cs+(cs===1?" day":" days"),"4 AM streak (best "+bs+")"],
+    [cs+(cs===1?" day":" days"),"3:30 AM streak (best "+bs+")"],
     [avg===("–")?"–":avg+" / 5","Average rating"],
     [fmtHM(mins),"Amritvela meditation"],
-    [fmtHM(pm),"Hourly pause time"],
-    [early+" / "+logged,"Days up by 4:15"],
+    [String(tc),"Traffic control total"],
+    [tcAvg+"/7","Traffic control daily average"],
+    [tcSt+(tcSt===1?" day":" days"),"Traffic control streak (best "+tcBest+")"],
+    [early+" / "+logged,"Days up by 3:30"],
     [woke.yes+" / "+woke.answered,"Amritvela days woke"],
     [logged+"","Days logged"],
     [fmtYaad(yaad),"Yaad total"],
@@ -719,7 +734,7 @@ function renderProgress(){
   barChart($("cYaad"),dates,function(d){return clampYaad(d.yaadMinutes)},0,null,fmtYaad,null,"Yaad ka chart");
   barChart($("cRating"),dates,function(d){return d.rating},5,[0,1,2,3,4,5],function(v){return v},function(v){return v>=3?"var(--accent)":"var(--warn)"},"Rating chart");
   barChart($("cMurli"),dates,function(d){return clampMurli(d.murli)},0,[0,1,2,3,4,5],function(v){return Math.round(v)},null,"Murli reads chart");
-  barChart($("cPauses"),dates,function(d){return pausesDone(d)},17,[0,4,8,12,17],function(v){return v},null,"Hourly pauses chart");
+  barChart($("cTraffic"),dates,function(d){return trafficDone(d)},7,[0,2,4,7],function(v){return v},null,"Traffic control chart");
 }
 
 /* ---------- history ---------- */
@@ -740,7 +755,7 @@ function renderHistory(){
     if(d.sleepPothamel!=null)bits.push("Pothamel "+(d.sleepPothamel?"Yes":"No"));
     if(d.sleepMeditation!=null)bits.push("Meditation before sleep "+(d.sleepMeditation?"Yes":"No"));
     if(d.sleepNoPhone!=null)bits.push("No phone "+(d.sleepNoPhone?"Yes":"No"));
-    bits.push(pausesDone(d)+"/17 pauses");
+    bits.push(trafficDone(d)+"/7 traffic control");
     var extra="";
     if(d.note)extra+='<div class="n">'+esc(d.note)+'</div>';
     else extra+='<div class="m" style="font-style:italic">No note</div>';
@@ -808,14 +823,7 @@ $("save").addEventListener("click",saveForm);
 $("date").addEventListener("change",function(){var v=$("date").value;if(v)goDate(v)});
 $("prevDay").addEventListener("click",function(){goDate(addDays(cur,-1))});
 $("nextDay").addEventListener("click",function(){if(cur<today())goDate(addDays(cur,1))});
-$("grid").addEventListener("click",function(e){var b=e.target.closest(".slot");if(b)openSheet(+b.dataset.h)});
-$("minChips").addEventListener("click",function(e){var b=e.target.closest("button");if(b)setSlot({status:"done",min:+b.dataset.m})});
-$("customOk").addEventListener("click",function(){var m=Math.round(+$("customMin").value);if(m>=1)setSlot({status:"done",min:Math.min(600,m)});else $("customMin").focus()});
-$("skipBtn").addEventListener("click",function(){setSlot({status:"skipped"})});
-$("clearBtn").addEventListener("click",function(){setSlot(null)});
-$("closeBtn").addEventListener("click",closeSheet);
-$("sheetBg").addEventListener("click",function(e){if(e.target===$("sheetBg"))closeSheet()});
-document.addEventListener("keydown",function(e){if(e.key==="Escape")closeSheet()});
+$("grid").addEventListener("click",function(e){var b=e.target.closest(".slot");if(b)toggleTraffic(b.dataset.k)});
 document.querySelector("nav").addEventListener("click",function(e){var b=e.target.closest("button");if(b)show(b.dataset.v)});
 $("range").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;range=b.dataset.r;
   Array.prototype.forEach.call($("range").children,function(c){c.classList.toggle("on",c===b)});renderProgress()});
