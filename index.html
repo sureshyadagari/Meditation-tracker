@@ -191,6 +191,23 @@ main.ptr-snap{transition:transform .22s ease}
         </div>
         <div class="hint" id="yaadHint" style="margin-top:8px">0m</div>
       </div>
+      <div class="sleep" id="checkingChecks">
+        <h2>Aaj ka checking</h2>
+        <div class="sleep-row">
+          <div class="sleep-q" id="prapthiLabel">Aaj kuch prapthi huaa?</div>
+          <div class="yn" role="group" aria-labelledby="prapthiLabel">
+            <button type="button" data-check="prapthi" data-val="yes" id="prapthiYes" aria-pressed="false">Yes</button>
+            <button type="button" data-check="prapthi" data-val="no" id="prapthiNo" aria-pressed="false">No</button>
+          </div>
+        </div>
+        <div class="sleep-row">
+          <div class="sleep-q" id="purityLabel">Purity bada?</div>
+          <div class="yn" role="group" aria-labelledby="purityLabel">
+            <button type="button" data-check="purity" data-val="yes" id="purityYes" aria-pressed="false">Yes</button>
+            <button type="button" data-check="purity" data-val="no" id="purityNo" aria-pressed="false">No</button>
+          </div>
+        </div>
+      </div>
       <div class="sleep" id="sleepChecks">
         <h2>Before sleep</h2>
         <div class="sleep-row">
@@ -310,7 +327,7 @@ function shortDate(s){var d=parseYmd(s);return d.getDate()+" "+MONTHS[d.getMonth
 /* ---------- storage ---------- */
 var db;
 function blank(){return {version:1,days:{}}}
-function blankDay(){return {wake:"",minutes:null,rating:null,amritvelaWoke:null,note:"",hourly:{},traffic:{},murli:0,churned:false,churnedPoint:"",practiced:false,practicedPoint:"",pointDone:null,yaadMinutes:0,sleepPothamel:null,sleepMeditation:null,sleepNoPhone:null}}
+function blankDay(){return {wake:"",minutes:null,rating:null,amritvelaWoke:null,note:"",hourly:{},traffic:{},murli:0,churned:false,churnedPoint:"",practiced:false,practicedPoint:"",pointDone:null,yaadMinutes:0,prapthi:null,purity:null,sleepPothamel:null,sleepMeditation:null,sleepNoPhone:null}}
 function derivePointDone(d){
   if(!d)return null;
   var v=parseYesNo(d.pointDone);
@@ -422,6 +439,8 @@ function normalize(o){
       practicedPoint:typeof d.practicedPoint==="string"?d.practicedPoint:"",
       pointDone:derivePointDone(d),
       yaadMinutes:clampYaad(d.yaadMinutes),
+      prapthi:parseYesNo(d.prapthi),
+      purity:parseYesNo(d.purity),
       sleepPothamel:parseYesNo(d.sleepPothamel),
       sleepMeditation:parseYesNo(d.sleepMeditation),
       sleepNoPhone:parseYesNo(d.sleepNoPhone),
@@ -441,6 +460,8 @@ function getDay(s){
     practiced:!!d.practiced,practicedPoint:typeof d.practicedPoint==="string"?d.practicedPoint:"",
     pointDone:derivePointDone(d),
     yaadMinutes:clampYaad(d.yaadMinutes),
+    prapthi:parseYesNo(d.prapthi),
+    purity:parseYesNo(d.purity),
     sleepPothamel:parseYesNo(d.sleepPothamel),
     sleepMeditation:parseYesNo(d.sleepMeditation),
     sleepNoPhone:parseYesNo(d.sleepNoPhone),
@@ -448,7 +469,7 @@ function getDay(s){
   };
 }
 function hasMorning(d){
-  return !!(d.wake||d.minutes!=null||d.rating!=null||d.amritvelaWoke!=null||d.note||(d.murli&&d.murli>0)||d.churned||d.churnedPoint||d.practiced||d.practicedPoint||d.pointDone!=null||(d.yaadMinutes&&d.yaadMinutes>0)||d.sleepPothamel!=null||d.sleepMeditation!=null||d.sleepNoPhone!=null);
+  return !!(d.wake||d.minutes!=null||d.rating!=null||d.amritvelaWoke!=null||d.note||(d.murli&&d.murli>0)||d.churned||d.churnedPoint||d.practiced||d.practicedPoint||d.pointDone!=null||(d.yaadMinutes&&d.yaadMinutes>0)||d.prapthi!=null||d.purity!=null||d.sleepPothamel!=null||d.sleepMeditation!=null||d.sleepNoPhone!=null);
 }
 function isEmptyDay(d){return !hasMorning(d)&&!Object.keys(d.hourly||{}).length&&trafficDone(d)===0}
 function putDay(s,d){if(isEmptyDay(d))delete db.days[s];else db.days[s]=d;persist()}
@@ -508,6 +529,8 @@ function readForm(d){
   d.practiced=!!d.practiced;
   d.practicedPoint=typeof d.practicedPoint==="string"?d.practicedPoint:"";
   d.yaadMinutes=readYaadMinutes();
+  d.prapthi=getYesNo("prapthi");
+  d.purity=getYesNo("purity");
   d.sleepPothamel=getYesNo("sleepPothamel");
   d.sleepMeditation=getYesNo("sleepMeditation");
   d.sleepNoPhone=getYesNo("sleepNoPhone");
@@ -534,6 +557,8 @@ function loadForm(){
   renderMurli();
   setYesNo("pointDone",derivePointDone(d));
   setYaadInputs(d.yaadMinutes);
+  setYesNo("prapthi",d.prapthi);
+  setYesNo("purity",d.purity);
   setYesNo("sleepPothamel",d.sleepPothamel);
   setYesNo("sleepMeditation",d.sleepMeditation);
   setYesNo("sleepNoPhone",d.sleepNoPhone);
@@ -664,12 +689,15 @@ function renderStats(dates){
     murli+=clampMurli(d.murli);yaad+=clampYaad(d.yaadMinutes)});
   function sleepCount(field){var yes=0,answered=0;dates.forEach(function(s){var d=db.days[s];if(!d||d[field]==null)return;answered++;if(d[field]===true)yes++});return {yes:yes,answered:answered}};
   var pot=sleepCount("sleepPothamel"),med=sleepCount("sleepMeditation"),ph=sleepCount("sleepNoPhone");
+  var prap=sleepCount("prapthi"),pur=sleepCount("purity");
   var woke=sleepCount("amritvelaWoke");
   var ptYes=0,ptAnswered=0;
   dates.forEach(function(s){var v=derivePointDone(db.days[s]);if(v==null)return;ptAnswered++;if(v===true)ptYes++});
   var potSt=currentFieldStreak("sleepPothamel"),potBest=bestFieldStreak("sleepPothamel");
   var medSt=currentFieldStreak("sleepMeditation"),medBest=bestFieldStreak("sleepMeditation");
   var phSt=currentFieldStreak("sleepNoPhone"),phBest=bestFieldStreak("sleepNoPhone");
+  var prapSt=currentFieldStreak("prapthi"),prapBest=bestFieldStreak("prapthi");
+  var purSt=currentFieldStreak("purity"),purBest=bestFieldStreak("purity");
   var avg=rs.length?(rs.reduce(function(a,b){return a+b},0)/rs.length).toFixed(1):"–";
   var murliAvg=logged?(murli/logged).toFixed(1):"–";
   var cs=currentStreak(),bs=bestStreak();
@@ -690,6 +718,8 @@ function renderStats(dates){
     [logged?fmtYaad(Math.round(yaad/logged)):"0m","Yaad daily average"],
     [String(murli),murliAvg==="–"?"Murli reads":"Murli reads (avg "+murliAvg+"/day)"],
     [ptYes+" / "+ptAnswered,"Churned or practiced a point · streak "+ptSt+" (best "+ptBest+")"],
+    [prap.yes+" / "+prap.answered,"Aaj kuch prapthi huaa? · streak "+prapSt+" (best "+prapBest+")"],
+    [pur.yes+" / "+pur.answered,"Purity bada? · streak "+purSt+" (best "+purBest+")"],
     [pot.yes+" / "+pot.answered,"Pothamel · streak "+potSt+" (best "+potBest+")"],
     [med.yes+" / "+med.answered,"Meditation before sleep · streak "+medSt+" (best "+medBest+")"],
     [ph.yes+" / "+ph.answered,"No phone · streak "+phSt+" (best "+phBest+")"]
@@ -768,6 +798,8 @@ function renderHistory(){
     var pt=derivePointDone(d);
     if(pt!=null)bits.push("Churned or practiced "+(pt?"Yes":"No"));
     if(clampYaad(d.yaadMinutes)>0)bits.push("Yaad "+fmtYaad(d.yaadMinutes));
+    if(d.prapthi!=null)bits.push("Aaj kuch prapthi huaa? "+(d.prapthi?"Yes":"No"));
+    if(d.purity!=null)bits.push("Purity bada? "+(d.purity?"Yes":"No"));
     if(d.sleepPothamel!=null)bits.push("Pothamel "+(d.sleepPothamel?"Yes":"No"));
     if(d.sleepMeditation!=null)bits.push("Meditation before sleep "+(d.sleepMeditation?"Yes":"No"));
     if(d.sleepNoPhone!=null)bits.push("No phone "+(d.sleepNoPhone?"Yes":"No"));
@@ -830,6 +862,7 @@ $("murliMinus").addEventListener("click",function(){if(curMurli<=0)return;curMur
 $("murliPlus").addEventListener("click",function(){if(curMurli>=MURLI_MAX)return;curMurli++;dirty=true;renderMurli();$("savedMsg").textContent=""});
 $("amritvelaWokeRow").addEventListener("click",function(e){var b=e.target.closest("button[data-amrit]");if(!b)return;toggleYesNo("amritvelaWoke",b.dataset.val==="yes");syncAmritvelaFields()});
 $("pointDoneRow").addEventListener("click",function(e){var b=e.target.closest("button[data-point]");if(!b)return;toggleYesNo("pointDone",b.dataset.val==="yes")});
+$("checkingChecks").addEventListener("click",function(e){var b=e.target.closest("button[data-check]");if(!b)return;toggleYesNo(b.dataset.check,b.dataset.val==="yes")});
 $("sleepChecks").addEventListener("click",function(e){var b=e.target.closest("button[data-sleep]");if(!b)return;toggleYesNo(b.dataset.sleep,b.dataset.val==="yes")});
 $("save").addEventListener("click",saveForm);
 $("date").addEventListener("change",function(){var v=$("date").value;if(v)goDate(v)});
